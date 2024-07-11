@@ -9,7 +9,7 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 // Clone your repository
-                git 'https://your-repo-url.git'
+                git 'https://github.com/BS-PMC-2024/BS-PMC-2024-Team30.git'
             }
         }
 
