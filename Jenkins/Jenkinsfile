@@ -1,0 +1,43 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_HUB_REPO = 'noamka/noss'
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                // Clone your repository
+                git 'https://your-repo-url.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Build Docker image
+                    docker.build("${DOCKER_HUB_REPO}:latest")
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                script {
+                    // Run Docker container and execute tests
+                    docker.image("${DOCKER_HUB_REPO}:latest").inside {
+                        sh 'python manage.py test noss/tests'
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // Actions that run after every build, like cleaning the workspace
+            cleanWs()
+        }
+    }
+}
