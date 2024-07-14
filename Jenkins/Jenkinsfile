@@ -1,43 +1,33 @@
 pipeline {
-    agent any
+    agent none
 
-    environment {
-        DOCKER_HUB_REPO = 'noamka/noss'
-    }
-
-    stages {
-        stage('Clone Repository') {
-            steps {
-                // Clone your repository
-                git 'https://github.com/BS-PMC-2024/BS-PMC-2024-Team30.git'
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    // Build Docker image
-                    docker.build("${DOCKER_HUB_REPO}:latest")
+    stages{
+        stage('Build') {
+            agent{
+                docker{
+                    image 'python:3:10'
                 }
             }
+            steps {
+                sh 'python -m py_compile sources/add2vals.py sources/calc.py'
+            }
         }
+    
 
         stage('Run Tests') {
-            steps {
-                script {
-                    // Run Docker container and execute tests
-                    docker.image("${DOCKER_HUB_REPO}:latest").inside {
-                        sh 'python manage.py test noss/tests'
-                    }
+            agent{
+                docker{
+                    image 'qnib/pytest'
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            // Actions that run after every build, like cleaning the workspace
-            cleanWs()
+            steps {                    
+                sh 'python manage.py test noss/tests'
+            }
+            post{
+                always {
+                    junit 'test-report/results.xml'
+                }
+            }
         }
     }
 }
