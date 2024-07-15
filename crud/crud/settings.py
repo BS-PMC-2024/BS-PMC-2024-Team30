@@ -28,10 +28,16 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
+LOGIN_REDIRECT_URL = 'home'  
+LOGOUT_REDIRECT_URL = 'home'  
+
+#AUTH_USER_MODEL = 'users.User'
+
 # Application definition
 
 INSTALLED_APPS = [
-    'noss',
+    'users.apps.UsersConfig',
+    'noss.apps.NossConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
