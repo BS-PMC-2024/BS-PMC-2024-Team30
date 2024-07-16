@@ -1,26 +1,17 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
 
+@login_required
 def home(request):
-<<<<<<< Updated upstream
-    return render(request, 'noss/home.html')
-#test
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-    return HttpResponse('<h1>Home</h1>')
-=======
-=======
->>>>>>> 42c11bd (commit)
-    return render(request, 'noss/home.html')
+    if request.user.persona == 'manager':
+        return redirect('manager_home')
+    else:
+        return redirect('developer_home')
 
-def login(request):
-    return render(request, 'noss/login.html')
-<<<<<<< HEAD
->>>>>>> 2844f25 (basic website - BSPMS2430-2 , BSPMS2430-3)
-=======
-=======
-    return HttpResponse('<h1>Home</h1>')
-#set
->>>>>>> 6e16e92 (commit)
->>>>>>> 42c11bd (commit)
->>>>>>> Stashed changes
+@login_required
+def manager_home(request):
+    return render(request, 'noss/manager_home.html')
+
+@login_required
+def developer_home(request):
+    return render(request, 'noss/developer_home.html')
