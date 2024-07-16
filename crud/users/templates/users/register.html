@@ -1,17 +1,9 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>User Registration</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+{% extends 'layout.html' %}
+
+{% block title %}User Registration{% endblock %}
+
+{% block content %}
     <style>
-        body {
-            background-color: #f8f9fa;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-        }
         .container {
             display: flex;
             justify-content: center;
@@ -49,8 +41,6 @@
             margin-bottom: 10px;
         }
     </style>
-</head>
-<body>
     <div class="container">
         <div class="registration-form">
             <h2>Register</h2>
@@ -71,5 +61,4 @@
             </form>
         </div>
     </div>
-</body>
-</html>
+{% endblock %}
