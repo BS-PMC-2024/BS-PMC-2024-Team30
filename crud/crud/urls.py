@@ -20,5 +20,7 @@ from users import views as user_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('noss.urls')),
-     path('register/', user_views.register, name='register'),
+    path('users/', include('users.urls')),
+
+
 ]
