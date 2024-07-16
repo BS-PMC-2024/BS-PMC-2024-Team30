@@ -7,3 +7,4 @@ def home(request):
 
 def login(request):
     return render(request, 'noss/login.html')
+#test
