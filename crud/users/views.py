@@ -1,51 +1,74 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.models import User
-from django import forms
+from django.contrib.auth import login, authenticate
+from django.core.mail import send_mail
+from .models import User  # Import the custom User model
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.template.loader import render_to_string
+from django.contrib.sites.shortcuts import get_current_site
+from django.contrib.auth.tokens import default_token_generator
+from django.urls import reverse
+from .forms import CustomUserCreationForm, LoginForm, VerificationForm
 
-# Registration Form
-class RegistrationForm(forms.ModelForm):
-    password1 = forms.CharField(label='Password', widget=forms.PasswordInput)
-    password2 = forms.CharField(label='Confirm Password', widget=forms.PasswordInput)
+def register(request):
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.is_active = False  # Deactivate account till it is verified
+            user.save()
+            current_site = get_current_site(request)
+            mail_subject = 'Activate your account.'
+            message = render_to_string('users/acc_active_email.html', {
+                'user': user,
+                'domain': current_site.domain,
+                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                'token': default_token_generator.make_token(user),
+            })
+            send_mail(mail_subject, message, 'your_email@example.com', [user.email])
+            return redirect('email_verification', uidb64=urlsafe_base64_encode(force_bytes(user.pk)), token=default_token_generator.make_token(user))
+    else:
+        form = CustomUserCreationForm()
+    return render(request, 'users/register.html', {'form': form})
 
-    class Meta:
-        model = User
-        fields = ['username', 'email']
+def email_verification(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
 
-    def clean_password2(self):
-        password1 = self.cleaned_data.get('password1')
-        password2 = self.cleaned_data.get('password2')
-        if password1 and password2 and password1 != password2:
-            raise forms.ValidationError("Passwords don't match")
-        return password2
+    if user is not None and default_token_generator.check_token(user, token):
+        user.is_active = True
+        user.save()
+        login(request, user)
+        return redirect('home')
+    else:
+        return render(request, 'users/email_verification.html', {'validlink': False})
 
 def login_view(request):
     if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
+        form = LoginForm(request.POST)
         if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
             user = authenticate(username=username, password=password)
             if user is not None:
-                login(request, user)
-                return redirect('home')
+                if user.is_active:
+                    login(request, user)
+                    return redirect('home')
+                else:
+                    # Send verification email again
+                    current_site = get_current_site(request)
+                    mail_subject = 'Activate your account.'
+                    message = render_to_string('users/acc_active_email.html', {
+                        'user': user,
+                        'domain': current_site.domain,
+                        'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                        'token': default_token_generator.make_token(user),
+                    })
+                    send_mail(mail_subject, message, 'your_email@example.com', [user.email])
+                    return redirect('email_verification', uidb64=urlsafe_base64_encode(force_bytes(user.pk)), token=default_token_generator.make_token(user))
     else:
-        form = AuthenticationForm()
+        form = LoginForm()
     return render(request, 'users/login.html', {'form': form})
-
-def register_view(request):
-    if request.method == 'POST':
-        form = RegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.set_password(form.cleaned_data['password1'])
-            user.save()
-            return redirect('login')
-    else:
-        form = RegistrationForm()
-    return render(request, 'users/register.html', {'form': form})
-
-def logout_view(request):
-    logout(request)
-    return redirect('home')
