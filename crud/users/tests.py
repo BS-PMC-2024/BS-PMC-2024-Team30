@@ -1,50 +1,37 @@
 from django.test import TestCase
 from django.urls import reverse
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import AuthenticationForm
 
-class LoginAndRegisterTests(TestCase):
-    
-    def test_login_template_rendered(self):
-        response = self.client.get(reverse('login'))  # Replace 'login' with your login view name
+User = get_user_model()
+
+class LoginTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='12345')
+        self.login_url = reverse('login')  # Make sure 'login' is the correct name for your login URL
+
+    def test_login_page_loads_correctly(self):
+        response = self.client.get(self.login_url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'login.html')
-        
-        # Check context data if needed
-        # context = response.context
-        # self.assertIn('key', context)
-        
-        # Check if form is rendered
+        self.assertTemplateUsed(response, 'login.html')  # Make sure this is the correct template name
         self.assertIsInstance(response.context['form'], AuthenticationForm)
-    
-    def test_register_template_rendered(self):
-        response = self.client.get(reverse('register'))  # Replace 'register' with your register view name
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'register.html')
-        
-        # Check context data if needed
-        # context = response.context
-        # self.assertIn('key', context)
-        
-        # Check if form is rendered
-        self.assertIsInstance(response.context['form'], UserCreationForm)
-    
-    def test_login_form_submission(self):
-        # Simulate form submission for login
-        form_data = {
+
+    def test_login_success(self):
+        response = self.client.post(self.login_url, {
             'username': 'testuser',
-            'password': 'testpassword'
-        }
-        response = self.client.post(reverse('login'), form_data)  # Replace 'login' with your login view name
-        self.assertEqual(response.status_code, 200)  # Adjust status code based on your implementation
-        # Add assertions for successful login behavior or redirects
-    
-    def test_register_form_submission(self):
-        # Simulate form submission for register
-        form_data = {
-            'username': 'newuser',
-            'password1': 'newpassword',
-            'password2': 'newpassword'
-        }
-        response = self.client.post(reverse('register'), form_data)  # Replace 'register' with your register view name
-        self.assertEqual(response.status_code, 200)  # Adjust status code based on your implementation
-        # Add assertions for successful registration behavior or redirects
+            'password': '12345'
+        })
+        self.assertRedirects(response, reverse('home'))  # Replace 'home' with your post-login redirect URL
+
+    def test_login_failure(self):
+        response = self.client.post(self.login_url, {
+            'username': 'testuser',
+            'password': 'wrongpassword'
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(response, 'form', None, 'Please enter a correct username and password. Note that both fields may be case-sensitive.')
+
+    def test_login_redirect_for_authenticated_user(self):
+        self.client.login(username='testuser', password='12345')
+        response = self.client.get(self.login_url)
+        self.assertRedirects(response, reverse('home'))  # Replace 'home' with your expected redirect URL for logged-in users
