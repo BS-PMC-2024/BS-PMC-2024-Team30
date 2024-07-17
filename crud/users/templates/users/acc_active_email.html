@@ -1,5 +1,7 @@
 Hi {{ user.username }},
 
-Please click on the link below to verify your email and complete your registration:
+Please use the following code to verify your email and complete your registration:
 
-<a href="http://{{ domain }}{% url 'email_verification' uidb64=uid token=token %}">Verify your email</a>
+Verification Code: {{ token }}
+
+Enter this code on the following page: <a href="http://{{ domain }}{% url 'email_verification' %}">Verify your email</a>

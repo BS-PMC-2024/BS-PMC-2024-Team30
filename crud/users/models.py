@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+import uuid
 
 class User(AbstractUser):
     PERSONA_CHOICES = (
@@ -7,6 +8,8 @@ class User(AbstractUser):
         ('developer', 'Developer'),
     )
     persona = models.CharField(max_length=10, choices=PERSONA_CHOICES, blank=True, null=True)
+    verification_code = models.UUIDField(default=uuid.uuid4, editable=False)
+    is_verified = models.BooleanField(default=False)
 
     groups = models.ManyToManyField(
         'auth.Group',
