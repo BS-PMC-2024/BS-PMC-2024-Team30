@@ -11,8 +11,7 @@ class CustomUserCreationForm(UserCreationForm):
         fields = ('username', 'email', 'persona', 'password1', 'password2')
 
 class VerificationForm(forms.Form):
-    uidb64 = forms.CharField()
-    token = forms.CharField()
+    code = forms.UUIDField()
 
 class LoginForm(forms.Form):
     username = forms.CharField()

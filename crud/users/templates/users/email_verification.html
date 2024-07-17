@@ -1,0 +1,21 @@
+{% extends 'layout.html' %}
+
+{% block title %}Email Verification{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-container">
+        <h2>Email Verification</h2>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Verify</button>
+        </form>
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                {{ error }}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
