@@ -1,50 +1,137 @@
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 from django.urls import reverse
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from unittest.mock import patch, Mock, call
+from django.contrib.sessions.middleware import SessionMiddleware
+from .views import register, email_verification, login_view
 
-class LoginAndRegisterTests(TestCase):
-    
-    def test_login_template_rendered(self):
-        response = self.client.get(reverse('login'))  # Replace 'login' with your login view name
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'login.html')
-        
-        # Check context data if needed
-        # context = response.context
-        # self.assertIn('key', context)
-        
-        # Check if form is rendered
-        self.assertIsInstance(response.context['form'], AuthenticationForm)
-    
-    def test_register_template_rendered(self):
-        response = self.client.get(reverse('register'))  # Replace 'register' with your register view name
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'register.html')
-        
-        # Check context data if needed
-        # context = response.context
-        # self.assertIn('key', context)
-        
-        # Check if form is rendered
-        self.assertIsInstance(response.context['form'], UserCreationForm)
-    
-    def test_login_form_submission(self):
-        # Simulate form submission for login
-        form_data = {
+class SimpleUserTests(TestCase):
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.register_url = reverse('register')
+        self.email_verification_url = reverse('email_verification')
+        self.login_url = reverse('login')
+        self.home_url = reverse('home')
+        self.user_data = {
             'username': 'testuser',
-            'password': 'testpassword'
+            'email': 'testuser@example.com',
+            'password1': 'Testpass123!',
+            'password2': 'Testpass123!',
+            'persona': 'developer'
         }
-        response = self.client.post(reverse('login'), form_data)  # Replace 'login' with your login view name
-        self.assertEqual(response.status_code, 200)  # Adjust status code based on your implementation
-        # Add assertions for successful login behavior or redirects
-    
-    def test_register_form_submission(self):
-        # Simulate form submission for register
-        form_data = {
-            'username': 'newuser',
-            'password1': 'newpassword',
-            'password2': 'newpassword'
-        }
-        response = self.client.post(reverse('register'), form_data)  # Replace 'register' with your register view name
-        self.assertEqual(response.status_code, 200)  # Adjust status code based on your implementation
-        # Add assertions for successful registration behavior or redirects
+
+    def _add_session_to_request(self, request):
+        """Helper method to add session to the request."""
+        middleware = SessionMiddleware(lambda req: None)
+        middleware.process_request(request)
+        request.session.save()
+
+    @patch('users.views.CustomUserCreationForm')
+    @patch('users.views.get_current_site')
+    @patch('users.views.send_mail')
+    def test_register_view_post_valid(self, mock_send_mail, mock_get_current_site, mock_form_class):
+        mock_form = mock_form_class.return_value
+        mock_form.is_valid.return_value = True
+        mock_user = Mock()
+        mock_form.save.return_value = mock_user
+        mock_get_current_site.return_value.domain = 'test.com'
+
+        request = self.factory.post(self.register_url, self.user_data)
+        self._add_session_to_request(request)
+
+        response = register(request)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, self.email_verification_url)
+        mock_send_mail.assert_called_once()
+        mock_user.save.assert_called_once()
+
+    @patch('users.views.VerificationForm')
+    def test_email_verification_view_post_valid(self, mock_form_class):
+        mock_form = mock_form_class.return_value
+        mock_form.is_valid.return_value = True
+        mock_form.cleaned_data = {'code': 'dummy_code'}
+
+        mock_user = Mock()
+        mock_user.is_verified = False
+        mock_user.is_active = False
+        mock_user.backend = 'django.contrib.auth.backends.ModelBackend'  # Set the backend
+
+        with patch('users.views.User.objects.get') as mock_get_user:
+            mock_get_user.return_value = mock_user
+
+            request = self.factory.post(self.email_verification_url, {'code': 'dummy_code'})
+            self._add_session_to_request(request)
+
+            response = email_verification(request)
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.url, self.home_url)
+            mock_user.save.assert_has_calls([call(), call(update_fields=['last_login'])])
+
+    @patch('users.views.VerificationForm')
+    def test_email_verification_view_post_invalid(self, mock_form_class):
+        mock_form = mock_form_class.return_value
+        mock_form.is_valid.return_value = False
+
+        request = self.factory.post(self.email_verification_url, {'code': 'invalid_code'})
+        self._add_session_to_request(request)
+
+        response = email_verification(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Invalid verification code')
+
+    @patch('users.views.authenticate')
+    @patch('users.views.login')
+    def test_login_view_post_valid(self, mock_login, mock_authenticate):
+        mock_user = Mock()
+        mock_user.is_active = True
+        mock_user.is_verified = True
+        mock_user.backend = 'django.contrib.auth.backends.ModelBackend'  # Set the backend
+        mock_authenticate.return_value = mock_user
+
+        request = self.factory.post(self.login_url, {
+            'username': 'testuser',
+            'password': 'Testpass123!',
+        })
+        self._add_session_to_request(request)
+
+        response = login_view(request)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, self.home_url)
+        mock_login.assert_called_once_with(request, mock_user)
+
+    @patch('users.views.authenticate')
+    def test_login_view_post_invalid(self, mock_authenticate):
+        mock_authenticate.return_value = None
+
+        request = self.factory.post(self.login_url, {
+            'username': 'wronguser',
+            'password': 'wrongpassword',
+        })
+        self._add_session_to_request(request)
+
+        response = login_view(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Invalid login credentials')
+
+    @patch('users.views.authenticate')
+    @patch('users.views.send_mail')
+    @patch('users.views.get_current_site')
+    def test_login_view_unverified_user(self, mock_get_current_site, mock_send_mail, mock_authenticate):
+        mock_user = Mock()
+        mock_user.is_active = True
+        mock_user.is_verified = False
+        mock_user.verification_code = 'dummy_code'
+        mock_user.backend = 'django.contrib.auth.backends.ModelBackend'  # Set the backend
+        mock_authenticate.return_value = mock_user
+        mock_get_current_site.return_value.domain = 'test.com'
+
+        request = self.factory.post(self.login_url, {
+            'username': 'unverifieduser',
+            'password': 'Testpass123!',
+        })
+        self._add_session_to_request(request)
+
+        response = login_view(request)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, self.email_verification_url)
+        mock_send_mail.assert_called_once()
