@@ -1,25 +1,37 @@
-# myapp/tests.py
 from django.test import TestCase
 from django.urls import reverse
-from noss.models import MyModel
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import AuthenticationForm
 
-class MyModelTestCase(TestCase):
+User = get_user_model()
+
+class LoginTests(TestCase):
     def setUp(self):
-        MyModel.objects.create(name="Test Name", description="Test Description")
+        self.user = User.objects.create_user(username='testuser', password='12345')
+        self.login_url = reverse('login')  # Make sure 'login' is the correct name for your login URL
 
-    def test_model_creation(self):
-        """Test if the MyModel object is created correctly."""
-        obj = MyModel.objects.get(name="Test Name")
-        self.assertEqual(obj.name, "Test Name")
-        self.assertEqual(obj.description, "Test Description")
+    def test_login_page_loads_correctly(self):
+        response = self.client.get(self.login_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'login.html')  # Make sure this is the correct template name
+        self.assertIsInstance(response.context['form'], AuthenticationForm)
 
-# class MyViewTestCase(TestCase):
-#     def test_view_status_code(self):
-#         """Test if the view returns a 200 status code."""
-#         response = self.client.get(reverse('myview'))
-#         self.assertEqual(response.status_code, 200)
+    def test_login_success(self):
+        response = self.client.post(self.login_url, {
+            'username': 'testuser',
+            'password': '12345'
+        })
+        self.assertRedirects(response, reverse('home'))  # Replace 'home' with your post-login redirect URL
 
-#     def test_view_template(self):
-#         """Test if the view uses the correct template."""
-#         response = self.client.get(reverse('myview'))
-#         self.assertTemplateUsed(response, 'myapp/myview.html')
+    def test_login_failure(self):
+        response = self.client.post(self.login_url, {
+            'username': 'testuser',
+            'password': 'wrongpassword'
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(response, 'form', None, 'Please enter a correct username and password. Note that both fields may be case-sensitive.')
+
+    def test_login_redirect_for_authenticated_user(self):
+        self.client.login(username='testuser', password='12345')
+        response = self.client.get(self.login_url)
+        self.assertRedirects(response, reverse('home'))  # Replace 'home' with your expected redirect URL for logged-in users
