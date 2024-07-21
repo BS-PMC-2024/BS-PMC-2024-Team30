@@ -7,9 +7,11 @@ pipeline {
 
     stages {
         stage('Checkout') {
+            agent {
             steps {
                 // Checkout the code from your repository
                 git 'https://github.com/BS-PMC-2024/BS-PMC-2024-Team30.git'
+            }
             }
         }
 
@@ -30,11 +32,13 @@ pipeline {
         }
 
         stage('Build') {
+            agent {
             steps {
                 sh '''
                 # Compile python files to check for syntax errors
                 python -m py_compile manage.py
                 '''
+            }
             }
         }
 
@@ -60,6 +64,7 @@ pipeline {
         }
 
         stage('Deploy') {
+            agent {
             steps {
                 script {
                     def dockerImage = docker.build("reqgenius:${env.BUILD_ID}")
@@ -67,6 +72,7 @@ pipeline {
                         dockerImage.push()
                     }
                 }
+            }
             }
         }
     }
