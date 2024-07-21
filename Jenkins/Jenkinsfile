@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         SQLITE_DB_PATH = 'crud/db.sqlite3'
-
     }
 
     stages {
@@ -75,6 +74,6 @@ pipeline {
     post {
         always {
             cleanWs()
-        }
-    }
+        }
+    }
 }
