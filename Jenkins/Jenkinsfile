@@ -1,5 +1,5 @@
 pipeline {
-    agent any
+    agent any  // Default agent for the pipeline
 
     environment {
         SQLITE_DB_PATH = 'crud/db.sqlite3'
@@ -7,18 +7,16 @@ pipeline {
 
     stages {
         stage('Checkout') {
-            agent {
             steps {
                 // Checkout the code from your repository
                 git 'https://github.com/BS-PMC-2024/BS-PMC-2024-Team30.git'
-            }
             }
         }
 
         stage('Setup') {
             agent {
                 docker {
-                    image 'python:3.12-alpine' // Use Python 3.12 and alpine as base image
+                    image 'python:3.12-alpine'  // Use Python 3.12 and alpine as base image
                 }
             }
             steps {
@@ -32,20 +30,18 @@ pipeline {
         }
 
         stage('Build') {
-            agent {
             steps {
                 sh '''
                 # Compile python files to check for syntax errors
                 python -m py_compile manage.py
                 '''
             }
-            }
         }
 
         stage('Test') {
             agent {
                 docker {
-                    image 'python:3.12-alpine'
+                    image 'python:3.12-alpine'  // Use Python 3.12 and alpine as base image
                 }
             }
             steps {
@@ -64,7 +60,6 @@ pipeline {
         }
 
         stage('Deploy') {
-            agent {
             steps {
                 script {
                     def dockerImage = docker.build("reqgenius:${env.BUILD_ID}")
@@ -72,7 +67,6 @@ pipeline {
                         dockerImage.push()
                     }
                 }
-            }
             }
         }
     }
