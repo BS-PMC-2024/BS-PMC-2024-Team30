@@ -31,6 +31,7 @@ pipeline {
                         sh '''
                         cd crud
                         . venv/bin/activate
+                        export DJANGO_SETTINGS_MODULE=crud.settings
                         # Ensure test reports directory exists
                         mkdir -p test-reports
                         # Run Django tests
