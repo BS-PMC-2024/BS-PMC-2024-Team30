@@ -23,20 +23,6 @@ pipeline {
             }
         }
 
-        stage('Build') {
-            steps {
-                script {
-                    docker.image('python:3.12-alpine').inside {
-                        sh '''
-                        cd crud
-                        # Compile python files to check for syntax errors
-                        . venv/bin/activate
-                        python -m py_compile manage.py
-                        '''
-                    }
-                }
-            }
-        }
 
         stage('Test') {
             steps {
