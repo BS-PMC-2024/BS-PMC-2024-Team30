@@ -23,15 +23,17 @@ pipeline {
             }
         }
 
-        stage('Test') {
+       stage('Test') {
             steps {
                 script {
                     docker.image('python:3.12-alpine').inside {
                         sh '''
                         cd crud
                         . venv/bin/activate
-                        # Run your tests
-                        pytest --junit-xml test-reports/results.xml
+                        # Ensure test reports directory exists
+                        mkdir -p test-reports
+                        # Run Django tests
+                        python manage.py test --junit-xml=test-reports/results.xml
                         '''
                     }
                 }
