@@ -47,23 +47,6 @@ pipeline {
                 }
             }
         }
-
-        stage('Deploy') {
-            steps {
-                script {
-                    docker.image('python:3.12-alpine').inside {
-                        sh '''
-                        # Build Docker image
-                        docker build -t reqgenius:${env.BUILD_ID} .
-                        '''
-                        def dockerImage = docker.image("reqgenius:${env.BUILD_ID}")
-                        docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials-id') {
-                            dockerImage.push()
-                        }
-                    }
-                }
-            }
-        }
     }
 
     post {
