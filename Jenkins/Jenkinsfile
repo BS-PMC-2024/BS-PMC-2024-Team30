@@ -39,7 +39,7 @@ pipeline {
             post {
                 always {
                     // Archive test results
-                    junit 'test-reports/results.xml'
+                    junit 'crud/test-reports/results.xml'
                 }
             }
         }
