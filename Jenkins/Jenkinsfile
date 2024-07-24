@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        SQLITE_DB_PATH = '/path/to/your/database/db.sqlite3'
+        SQLITE_DB_PATH = 'crud/db.sqlite3'
     }
 
     stages {
