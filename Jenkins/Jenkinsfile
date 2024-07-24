@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         SQLITE_DB_PATH = 'crud/db.sqlite3'
-        DJANGO_SETTINGS_MODULE = 'crud.crud.settings'
+        DJANGO_SETTINGS_MODULE = 'crud.settings'
     }
 
     stages {
