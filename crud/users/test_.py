@@ -79,8 +79,8 @@ class SimpleUserTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Invalid verification code')
 
-    @patch('users.views.authenticate')
-    @patch('users.views.login')
+    # @patch('users.views.authenticate')
+    # @patch('users.views.login')
     # def test_login_view_post_valid(self, mock_login, mock_authenticate):
     #     mock_user = Mock()
     #     mock_user.is_active = True
