@@ -12,7 +12,6 @@ pipeline {
                 script {
                     docker.image('python:3.12-alpine').inside {
                         sh '''
-                        cd crud
                         # Install dependencies
                         python -m venv venv
                         . venv/bin/activate
@@ -28,12 +27,11 @@ pipeline {
                 script {
                     docker.image('python:3.12-alpine').inside {
                         sh '''
-                        cd crud
                         . venv/bin/activate
                         # Ensure test reports directory exists
                         mkdir -p test-reports
                         # Run Django tests
-                        python manage.py test --junit-xml=test-reports/results.xml
+                        pytest --junit-xml test-reports/results.xml
                         '''
                     }
                 }
@@ -41,7 +39,7 @@ pipeline {
             post {
                 always {
                     // Archive test results
-                    junit 'crud/test-reports/results.xml'
+                    junit 'test-reports/results.xml'
                 }
             }
         }
@@ -51,7 +49,6 @@ pipeline {
                 script {
                     docker.image('python:3.12-alpine').inside {
                         sh '''
-                        cd crud
                         # Build Docker image
                         docker build -t reqgenius:${env.BUILD_ID} .
                         '''
