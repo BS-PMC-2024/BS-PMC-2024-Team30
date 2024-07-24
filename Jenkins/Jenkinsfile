@@ -14,11 +14,11 @@ pipeline {
         }
 
         stage('Setup') {
-            agent {
+           
                 docker {
                     image 'python:3.12-alpine'  // Use Python 3.12 and alpine as base image
                 }
-            }
+            
             steps {
                 sh '''
                 # Install dependencies
@@ -39,11 +39,11 @@ pipeline {
         }
 
         stage('Test') {
-            agent {
+            
                 docker {
                     image 'python:3.12-alpine'  // Use Python 3.12 and alpine as base image
                 }
-            }
+            
             steps {
                 sh '''
                 . venv/bin/activate
