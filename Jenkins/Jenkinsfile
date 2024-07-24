@@ -12,7 +12,7 @@ pipeline {
                 script {
                     docker.image('python:3.12-alpine').inside {
                         sh '''
-                        cd crud
+                        
                         # Install dependencies
                         python -m venv venv
                         . venv/bin/activate
