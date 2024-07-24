@@ -6,13 +6,6 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                // Checkout the code from your repository
-                git 'https://github.com/BS-PMC-2024/BS-PMC-2024-Team30.git'
-            }
-        }
-
         stage('Setup') {
             steps {
                 script {
