@@ -12,6 +12,7 @@ pipeline {
                 script {
                     docker.image('python:3.12-alpine').inside {
                         sh '''
+                        cd crud
                         # Install dependencies
                         python -m venv venv
                         . venv/bin/activate
@@ -27,6 +28,7 @@ pipeline {
                 script {
                     docker.image('python:3.12-alpine').inside {
                         sh '''
+                        cd crud
                         . venv/bin/activate
                         # Ensure test reports directory exists
                         mkdir -p test-reports
@@ -39,7 +41,7 @@ pipeline {
             post {
                 always {
                     // Archive test results
-                    junit 'test-reports/results.xml'
+                    junit 'crud/test-reports/results.xml'
                 }
             }
         }
