@@ -2,7 +2,7 @@ from django.test import TestCase, RequestFactory
 from django.urls import reverse
 from unittest.mock import patch, Mock, call
 from django.contrib.sessions.middleware import SessionMiddleware
-from .views import register, email_verification, login_view
+from .users.views import register, email_verification, login_view
 
 class SimpleUserTests(TestCase):
 
