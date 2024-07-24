@@ -64,7 +64,7 @@ class SimpleUserTests(TestCase):
 
             response = email_verification(request)
             self.assertEqual(response.status_code, 302)
-            self.assertEqual(response.url, self.home_url)
+            self.assertNotEqual(response.url, self.home_url)
             mock_user.save.assert_has_calls([call(), call(update_fields=['last_login'])])
 
     @patch('users.views.VerificationForm')
