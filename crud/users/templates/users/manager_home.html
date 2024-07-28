@@ -1,0 +1,28 @@
+{% extends 'layout.html' %}
+
+{% block title %}Manager Home{% endblock %}
+
+{% block content %}
+    <h1>Welcome, {{ user.username }}</h1>
+
+    <h2>Create a New Project</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Create Project</button>
+    </form>
+
+    <h2>Your Projects</h2>
+    <ul>
+        {% for project in projects %}
+            <li>
+                <strong>{{ project.name }}</strong>
+                <ul>
+                    {% for member in project.team_members.all %}
+                        <li>{{ member.username }}</li>
+                    {% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

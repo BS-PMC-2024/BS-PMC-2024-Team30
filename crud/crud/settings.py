@@ -118,4 +118,3 @@ EMAIL_HOST_USER = 'apikey'  # This is literal, do not change it to your SendGrid
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
-
