@@ -1,15 +1,65 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login, authenticate
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import login, authenticate, logout
 from django.core.mail import send_mail
-from .models import User
+from .models import User, Project
 from django.template.loader import render_to_string
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
-from .forms import CustomUserCreationForm, LoginForm, VerificationForm
+from .forms import CustomUserCreationForm, LoginForm, VerificationForm, ProjectForm
 import uuid
 import logging
 
 logger = logging.getLogger(__name__)
+
+@login_required
+def manager_home(request):
+    if request.user.persona != 'manager':
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = ProjectForm(request.POST)
+        if form.is_valid():
+            project = form.save(commit=False)
+            project.manager = request.user
+            project.save()
+            emails = form.cleaned_data['team_member_emails'].split(',')
+            for email in emails:
+                email = email.strip()
+                try:
+                    user = User.objects.get(email=email)
+                    # Send request to join project
+                    send_project_request_email(request, user, project)
+                except User.DoesNotExist:
+                    # Send invitation to sign up and join project
+                    send_invitation_email(request, email, project)
+            return redirect('manager_home')
+    else:
+        form = ProjectForm()
+
+    projects = Project.objects.filter(manager=request.user)
+
+    return render(request, 'users/manager_home.html', {'form': form, 'projects': projects})
+
+def send_project_request_email(request, user, project):
+    current_site = get_current_site(request)
+    mail_subject = f'Invitation to join project {project.name}'
+    message = render_to_string('users/project_request_email.html', {
+        'user': user,
+        'domain': current_site.domain,
+        'project': project,
+    })
+    send_mail(mail_subject, message, 'shohamdimri@gmail.com', [user.email])
+
+def send_invitation_email(request, email, project):
+    current_site = get_current_site(request)
+    mail_subject = f'Invitation to join {current_site.domain} and project {project.name}'
+    message = render_to_string('users/project_invitation_email.html', {
+        'domain': current_site.domain,
+        'project': project,
+        'signup_url': reverse('register'),
+    })
+    send_mail(mail_subject, message, 'shohamdimri@gmail.com', [email])
 
 def register(request):
     if request.method == 'POST':
@@ -40,7 +90,7 @@ def email_verification(request):
             code = form.cleaned_data['code']
             logger.debug(f"Submitted verification code: {code}")
             try:
-                user = User.objects.get(verification_code=code)
+                user = User.objects.get(verification_code=uuid.UUID(code))  # Convert to UUID
                 logger.debug(f"Retrieved user: {user.username} with verification code: {user.verification_code}")
                 if user and not user.is_verified:
                     user.is_active = True
@@ -48,7 +98,7 @@ def email_verification(request):
                     user.save()
                     login(request, user)
                     return redirect('home')
-            except User.DoesNotExist:
+            except (User.DoesNotExist, ValueError):
                 logger.debug(f"User does not exist for the provided verification code: {code}")
                 pass
         return render(request, 'users/email_verification.html', {'form': form, 'error': 'Invalid verification code'})
@@ -84,3 +134,7 @@ def login_view(request):
     else:
         form = LoginForm()
     return render(request, 'users/login.html', {'form': form})
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')

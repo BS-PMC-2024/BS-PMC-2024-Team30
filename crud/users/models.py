@@ -2,15 +2,16 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 import uuid
 
-
 class User(AbstractUser):
     PERSONA_CHOICES = (
         ('manager', 'Manager'),
         ('developer', 'Developer'),
     )
     persona = models.CharField(max_length=10, choices=PERSONA_CHOICES, blank=True, null=True)
-    verification_code = models.UUIDField(default=uuid.uuid4, editable=False)
+    verification_code = models.CharField(max_length=5, blank=True, null=True)
     is_verified = models.BooleanField(default=False)
+    email = models.EmailField(unique=True)
+
 
     groups = models.ManyToManyField(
         'auth.Group',
@@ -27,3 +28,12 @@ class User(AbstractUser):
         help_text='Specific permissions for this user.',
         related_query_name='custom_user',
     )
+
+class Project(models.Model):
+    name = models.CharField(max_length=100)
+    manager = models.ForeignKey(User, related_name='managed_projects', on_delete=models.CASCADE)
+    team_members = models.ManyToManyField(User, related_name='projects')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
