@@ -9,9 +9,9 @@ class User(AbstractUser):
         ('developer', 'Developer'),
     )
     persona = models.CharField(max_length=10, choices=PERSONA_CHOICES, blank=True, null=True)
-    verification_code = models.UUIDField(default=uuid.uuid4, editable=False)
+    verification_code = models.UUIDField(default=uuid.uuid4)
     is_verified = models.BooleanField(default=False)
-
+    email = models.EmailField(unique=True)
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='custom_user_set',
