@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users',  # Ensure your users app is listed here
     'noss',   # Ensure your noss app is listed here
+
 ]
 
 MIDDLEWARE = [
@@ -32,6 +33,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'crud.middleware.EmailVerificationMiddleware',  
+
 ]
 
 ROOT_URLCONF = 'crud.urls'
@@ -103,8 +106,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
 
-# Email Backend for testing purposes
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Email Backend for SendGrid
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.sendgrid.net'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'apikey'  # This is literal, do not change it to your SendGrid username
+
+
+
 # Redirect URLs
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
