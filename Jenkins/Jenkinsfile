@@ -1,33 +1,57 @@
 pipeline {
-    agent none
+    agent any
 
-    stages{
-        stage('Build') {
-            agent{
-                docker{
-                    image 'python:3:10'
-                }
-            }
+    environment {
+        SQLITE_DB_PATH = 'crud/db.sqlite3'
+        DJANGO_SETTINGS_MODULE = 'crud.settings'
+    }
+
+    stages {
+
+        stage('Setup') {
             steps {
-                sh 'python -m py_compile sources/add2vals.py sources/calc.py'
+                script {
+                    docker.image('python:3.12-alpine').inside {
+                        sh '''
+                        cd crud
+                        # Install dependencies
+                        python -m venv venv
+                        . venv/bin/activate
+                        pip install -r requirements.txt
+                        '''
+                    }
+                }
             }
         }
-    
-
-        stage('Run Tests') {
-            agent{
-                docker{
-                    image 'qnib/pytest'
+ 
+       stage('Test') {
+            steps {
+                script {
+                    docker.image('python:3.12-alpine').inside {
+                        sh '''
+                        cd crud
+                        . venv/bin/activate
+                        export DJANGO_SETTINGS_MODULE=crud.settings
+                        # Ensure test reports directory exists
+                        mkdir -p test-reports
+                        # Run Django tests
+                        pytest --junit-xml test-reports/results.xml
+                        '''
+                    }
                 }
             }
-            steps {                    
-                sh 'python manage.py test noss/tests'
-            }
-            post{
+            post {
                 always {
-                    junit 'test-report/results.xml'
+                    // Archive test results
+                    junit 'crud/test-reports/results.xml'
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
         }
     }
 }

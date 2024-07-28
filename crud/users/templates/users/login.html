@@ -1,0 +1,72 @@
+{% extends 'layout.html' %}
+
+{% block title %}User Login{% endblock %}
+
+{% block content %}
+    <style>
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+        .login-form {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+            margin-top: 50px;
+        }
+        .login-form h2 {
+            margin-bottom: 20px;
+            text-align: center;
+            font-family: 'Arial', sans-serif;
+            color: #333;
+        }
+        .login-form .form-group {
+            margin-bottom: 20px;
+        }
+        .login-form .form-control {
+            border-radius: 5px;
+        }
+        .login-form button {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .errorlist {
+            color: red;
+            margin-bottom: 10px;
+        }
+        .alert {
+            margin-top: 20px;
+        }
+    </style>
+    <div class="container">
+        <div class="login-form">
+            <h2>Login</h2>
+            <form method="post">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div class="form-group">
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="errorlist">
+                                {{ field.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+            {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
