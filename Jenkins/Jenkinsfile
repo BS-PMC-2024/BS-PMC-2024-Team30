@@ -2,70 +2,48 @@ pipeline {
     agent any
 
     environment {
-        SQLITE_DB_PATH = 'crud\db.sqlite3'
+        SQLITE_DB_PATH = 'crud/db.sqlite3'
+        DJANGO_SETTINGS_MODULE = 'crud.settings'
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                // Checkout the code from your repository
-                git 'https://github.com/BS-PMC-2024/BS-PMC-2024-Team30.git'
-            }
-        }
 
         stage('Setup') {
-            agent {
-                docker {
-                    image 'python:3.12-alpine' // Use Python 3.12 and alpine as base image
+            steps {
+                script {
+                    docker.image('python:3.12-alpine').inside {
+                        sh '''
+                        cd crud
+                        # Install dependencies
+                        python -m venv venv
+                        . venv/bin/activate
+                        pip install -r requirements.txt
+                        '''
+                    }
                 }
             }
-            steps {
-                sh '''
-                # Install dependencies
-                python -m venv venv
-                . venv/bin/activate
-                pip install -r requirements.txt
-                '''
-            }
         }
-
-        stage('Build') {
+ 
+       stage('Test') {
             steps {
-                sh '''
-                # Compile python files to check for syntax errors
-                python -m py_compile manage.py
-                '''
-            }
-        }
-
-        stage('Test') {
-            agent {
-                docker {
-                    image 'python:3.12-alpine'
+                script {
+                    docker.image('python:3.12-alpine').inside {
+                        sh '''
+                        cd crud
+                        . venv/bin/activate
+                        export DJANGO_SETTINGS_MODULE=crud.settings
+                        # Ensure test reports directory exists
+                        mkdir -p test-reports
+                        # Run Django tests
+                        pytest --junit-xml test-reports/results.xml
+                        '''
+                    }
                 }
-            }
-            steps {
-                sh '''
-                . venv/bin/activate
-                # Run your tests
-                pytest --junit-xml test-reports/results.xml
-                '''
             }
             post {
                 always {
                     // Archive test results
-                    junit 'test-reports/results.xml'
-                }
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                script {
-                    def dockerImage = docker.build("reqgenius:${env.BUILD_ID}")
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials-id') {
-                        dockerImage.push()
-                    }
+                    junit 'crud/test-reports/results.xml'
                 }
             }
         }
@@ -74,6 +52,6 @@ pipeline {
     post {
         always {
             cleanWs()
-        }
-    }
+        }
+    }
 }
