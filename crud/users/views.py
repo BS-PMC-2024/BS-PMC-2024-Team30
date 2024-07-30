@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
 from django.core.mail import send_mail
@@ -18,6 +18,15 @@ def manager_home(request):
         return redirect('home')
 
     if request.method == 'POST':
+        if 'delete_project_id' in request.POST:
+            # Handle project deletion
+            project_id = request.POST.get('delete_project_id')
+            project = get_object_or_404(Project, id=project_id, manager=request.user)
+            project.delete()
+            messages.success(request, 'Project deleted successfully!')
+            return redirect('manager_home')
+
+        # Handle project creation
         form = ProjectForm(request.POST)
         if form.is_valid():
             project = form.save(commit=False)
@@ -33,12 +42,12 @@ def manager_home(request):
                 except User.DoesNotExist:
                     # Send invitation to sign up and join project
                     send_invitation_email(request, email, project)
+            messages.success(request, 'Project created successfully!')
             return redirect('manager_home')
     else:
         form = ProjectForm()
 
     projects = Project.objects.filter(manager=request.user)
-
     return render(request, 'users/manager_home.html', {'form': form, 'projects': projects})
 
 def send_project_request_email(request, user, project):
@@ -132,7 +141,6 @@ def login_view(request):
         form = LoginForm()
     
     return render(request, 'users/login.html', {'form': form})
-
 
 def verify_code(request):
     if request.method == 'POST':

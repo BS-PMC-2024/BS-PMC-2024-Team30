@@ -3,7 +3,7 @@
 {% block title %}Manager Home{% endblock %}
 
 {% block content %}
-    <h1>Welcome, {{user.username }}</h1>
+    <h1>Welcome, {{ user.username }}</h1>
 
     <h2>Create a New Project</h2>
     <form method="post">
@@ -22,6 +22,12 @@
                         <li>{{ member.username }}</li>
                     {% endfor %}
                 </ul>
+                <!-- Delete Project Form -->
+                <form method="post" action="{% url 'delete_project' %}" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="project_id" value="{{ project.id }}">
+                    <button type="submit" class="btn btn-danger">Delete Project</button>
+                </form>
             </li>
         {% endfor %}
     </ul>
