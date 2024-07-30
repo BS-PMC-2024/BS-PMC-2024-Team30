@@ -7,34 +7,40 @@
         .container {
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
             min-height: 100vh;
+            background-color: #f7f7f7;
         }
         .login-form {
             background: white;
-            padding: 30px;
+            padding: 40px;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
             width: 100%;
-            margin-top: 50px;
         }
         .login-form h2 {
-            margin-bottom: 20px;
+            margin-bottom: 30px;
             text-align: center;
             font-family: 'Arial', sans-serif;
             color: #333;
         }
-        .login-form .form-group {
+        .form-group {
             margin-bottom: 20px;
         }
-        .login-form .form-control {
+        .form-control {
             border-radius: 5px;
         }
-        .login-form button {
+        .btn-primary {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             border-radius: 5px;
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
         }
         .errorlist {
             color: red;
