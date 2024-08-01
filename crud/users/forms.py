@@ -1,7 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from .models import User, Project
-
+from .models import User, Project, CodeFile, Directory
 class CustomUserCreationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = User
@@ -30,4 +29,23 @@ class ProjectForm(forms.ModelForm):
         fields = ['name', 'description', 'team_member_emails']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Project name'}),
+        }
+        
+class CodeFileUploadForm(forms.ModelForm):
+    class Meta:
+        model = CodeFile
+        fields = ['directory', 'file', 'name']
+
+class DirectoryForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        project = kwargs.pop('project', None)
+        super().__init__(*args, **kwargs)
+        if project:
+            self.fields['parent'].queryset = Directory.objects.filter(project=project)
+    
+    class Meta:
+        model = Directory
+        fields = ['name', 'parent']
+        widgets = {
+            'parent': forms.Select(attrs={'class': 'form-control'})
         }
