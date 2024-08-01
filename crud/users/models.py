@@ -27,11 +27,14 @@ class User(AbstractUser):
         related_query_name='custom_user',
     )
 
+# models.py
 class Project(models.Model):
     name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)  # Added description field
     manager = models.ForeignKey(User, related_name='managed_projects', on_delete=models.CASCADE)
     team_members = models.ManyToManyField(User, related_name='projects')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
+

@@ -1,0 +1,48 @@
+<!-- users/templates/users/project_detail.html -->
+{% extends 'layout.html' %}
+
+{% block title %}Project Detail{% endblock %}
+
+{% block content %}
+    <!-- Navbar for Project Pages -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+        <a class="navbar-brand" href="#">Project Menu</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'project_settings' pk=project.pk %}">Project Settings</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'project_documents' pk=project.pk %}">Project Documents</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'project_code' pk=project.pk %}">Project Code</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8">
+                <h1>{{ project.name }}</h1>
+                <p><strong>Created on:</strong> {{ project.created_at|date:"F d, Y H:i" }}</p>
+                <p><strong>Managed by:</strong> {{ project.manager.username }}</p>
+                <h2>Description</h2>
+                <p>{{ project.description|default:"No description available." }}</p>
+                <h3>Team Members</h3>
+                <ul class="list-group">
+                    {% for member in project.team_members.all %}
+                        <li class="list-group-item">{{ member.username }}</li>
+                    {% empty %}
+                        <li class="list-group-item">No team members assigned.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <!-- Optional Section for Future Features -->
+                <!-- You can add more information or functionality here if needed -->
+            </div>
+        </div>
+    </div>
+{% endblock %}

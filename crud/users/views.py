@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
 from django.core.mail import send_mail
@@ -11,6 +11,23 @@ import uuid
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def project_detail(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    return render(request, 'users/project_detail.html', {'project': project})
+
+def project_settings(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    return render(request, 'users/project_settings.html', {'project': project})
+
+def project_documents(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    return render(request, 'users/project_documents.html', {'project': project})
+
+def project_code(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    return render(request, 'users/project_code.html', {'project': project})
 
 @login_required
 def manager_home(request):
