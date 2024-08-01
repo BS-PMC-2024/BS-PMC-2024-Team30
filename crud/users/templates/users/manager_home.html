@@ -3,7 +3,26 @@
 {% block title %}Manager Home{% endblock %}
 
 {% block content %}
-    <h1>Welcome, {{user.username }}</h1>
+    <style>
+        .message {
+            border: 1px solid green;
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+    </style>
+
+    <h1>Welcome, {{ user.username }}</h1>
+
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }} message"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 
     <h2>Create a New Project</h2>
     <form method="post">

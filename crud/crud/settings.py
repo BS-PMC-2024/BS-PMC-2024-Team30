@@ -112,7 +112,7 @@ EMAIL_HOST = 'smtp.sendgrid.net'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'apikey'  # This is literal, do not change it to your SendGrid username
-
+EMAIL_HOST_PASSWORD = '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'
 
 # Redirect URLs
 LOGIN_URL = 'login'

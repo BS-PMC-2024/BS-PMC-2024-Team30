@@ -2,10 +2,11 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
 from django.core.mail import send_mail
-from .models import User, Project
 from django.template.loader import render_to_string
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
+from django.contrib import messages
+from .models import User, Project
 from .forms import CustomUserCreationForm, LoginForm, VerificationForm, ProjectForm
 import uuid
 import logging
@@ -28,11 +29,10 @@ def manager_home(request):
                 email = email.strip()
                 try:
                     user = User.objects.get(email=email)
-                    # Send request to join project
                     send_project_request_email(request, user, project)
                 except User.DoesNotExist:
-                    # Send invitation to sign up and join project
                     send_invitation_email(request, email, project)
+            messages.success(request, 'Project created successfully')
             return redirect('manager_home')
     else:
         form = ProjectForm()
@@ -115,24 +115,21 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             
             if user is not None and user.is_verified:
-                # Generate a new verification code
                 user.verification_code = uuid.uuid4()
                 user.save()
 
-                # Send the verification code to the user’s email
                 mail_subject = 'Your login verification code'
                 message = f'Your verification code is {user.verification_code}'
                 send_mail(mail_subject, message, 'shohamdimri@gmail.com', [user.email])
 
-                request.session['user_id'] = user.id  # Store user ID in session
-                return redirect('verify_code')  # Redirect to code verification page
+                request.session['user_id'] = user.id
+                return redirect('verify_code')
             else:
                 return render(request, 'users/login.html', {'form': form, 'error': 'Invalid username/password or account not verified'})
     else:
         form = LoginForm()
     
     return render(request, 'users/login.html', {'form': form})
-
 
 def verify_code(request):
     if request.method == 'POST':
@@ -143,7 +140,7 @@ def verify_code(request):
             try:
                 user = User.objects.get(id=user_id, verification_code=code)
                 if user:
-                    login(request, user)  # Log the user in
+                    login(request, user)
                     return redirect('home')
             except User.DoesNotExist:
                 pass
