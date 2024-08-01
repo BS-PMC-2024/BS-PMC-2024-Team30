@@ -12,21 +12,29 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+def project_detail(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    return render(request, 'users/project_detail.html', {'project': project})
+
+def project_settings(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    return render(request, 'users/project_settings.html', {'project': project})
+
+def project_documents(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    return render(request, 'users/project_documents.html', {'project': project})
+
+def project_code(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    return render(request, 'users/project_code.html', {'project': project})
+
 @login_required
 def manager_home(request):
     if request.user.persona != 'manager':
         return redirect('home')
 
     if request.method == 'POST':
-        if 'delete_project_id' in request.POST:
-            # Handle project deletion
-            project_id = request.POST.get('delete_project_id')
-            project = get_object_or_404(Project, id=project_id, manager=request.user)
-            project.delete()
-            messages.success(request, 'Project deleted successfully!')
-            return redirect('manager_home')
-
-        # Handle project creation
         form = ProjectForm(request.POST)
         if form.is_valid():
             project = form.save(commit=False)
@@ -42,12 +50,12 @@ def manager_home(request):
                 except User.DoesNotExist:
                     # Send invitation to sign up and join project
                     send_invitation_email(request, email, project)
-            messages.success(request, 'Project created successfully!')
             return redirect('manager_home')
     else:
         form = ProjectForm()
 
     projects = Project.objects.filter(manager=request.user)
+
     return render(request, 'users/manager_home.html', {'form': form, 'projects': projects})
 
 def send_project_request_email(request, user, project):
@@ -141,6 +149,7 @@ def login_view(request):
         form = LoginForm()
     
     return render(request, 'users/login.html', {'form': form})
+
 
 def verify_code(request):
     if request.method == 'POST':
