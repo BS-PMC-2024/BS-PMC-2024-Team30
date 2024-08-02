@@ -2,11 +2,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
 from django.core.mail import send_mail
-from .models import User, Project
+from .models import User, Project, Permission
 from django.template.loader import render_to_string
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 from .forms import CustomUserCreationForm, LoginForm, VerificationForm, ProjectForm
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.core.exceptions import PermissionDenied
 import uuid
 import logging
 
@@ -173,3 +176,62 @@ def verify_code(request):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+@require_http_methods(["POST"])
+@login_required
+def set_permission(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    if project.manager != request.user:
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+
+    data = request.POST
+    user = User.objects.get(pk=data['user_id'])
+    permission_type = data['permission_type']
+
+    Permission.objects.update_or_create(
+        user=user,
+        project=project,
+        defaults={'permission_type': permission_type},
+    )
+    return JsonResponse({'success': True})
+
+@require_http_methods(["GET"])
+@login_required
+def get_permissions(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    permissions = Permission.objects.filter(project=project)
+    permissions_data = [
+        {'user': p.user.username, 'permission_type': p.permission_type}
+        for p in permissions
+    ]
+    return JsonResponse(permissions_data, safe=False)
+
+
+
+def project_detail(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    permission = Permission.objects.filter(user=request.user, project=project, permission_type='view').exists()
+    if not permission and project.manager != request.user:
+        raise PermissionDenied
+    return render(request, 'users/project_detail.html', {'project': project})
+
+def project_documents(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    permission = Permission.objects.filter(user=request.user, project=project, permission_type='view').exists()
+    if not permission and project.manager != request.user:
+        raise PermissionDenied
+    return render(request, 'users/project_documents.html', {'project': project})
+
+def project_code(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    permission = Permission.objects.filter(user=request.user, project=project, permission_type='view').exists()
+    if not permission and project.manager != request.user:
+        raise PermissionDenied
+    return render(request, 'users/project_code.html', {'project': project})
+
+def project_settings(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    permission = Permission.objects.filter(user=request.user, project=project, permission_type='edit').exists()
+    if not permission and project.manager != request.user:
+        raise PermissionDenied
+    return render(request, 'users/project_settings.html', {'project': project})
