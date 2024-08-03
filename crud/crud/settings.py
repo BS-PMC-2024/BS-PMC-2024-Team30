@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+    'social_django',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -45,9 +46,7 @@ MIDDLEWARE = [
 ]
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
-    'social_core.backends.github.GithubOpenIDConnect',
+'django.contrib.auth.backends.ModelBackend',
 
 )
 
@@ -127,7 +126,6 @@ EMAIL_HOST = 'smtp.sendgrid.net'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'apikey'  # This is literal, do not change it to your SendGrid username
-
 
 # Redirect URLs
 LOGIN_URL = 'login'
