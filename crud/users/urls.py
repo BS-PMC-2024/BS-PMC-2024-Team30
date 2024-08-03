@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 urlpatterns = [
@@ -12,8 +12,9 @@ urlpatterns = [
     path('project/<int:pk>/settings/', views.project_settings, name='project_settings'),
     path('project/<int:pk>/documents/', views.project_documents, name='project_documents'),
     path('project/<int:pk>/code/', views.project_code, name='project_code'),
-    path('project/<int:project_id>/upload/', views.upload_code, name='upload_code'),
     path('project/<int:project_id>/directories/', views.manage_directories, name='manage_directories'),
     path('directory/<int:directory_id>/', views.view_directory, name='view_directory'),
     path('directory/<int:directory_id>/delete/', views.delete_directory, name='delete_directory'),
+    path('accounts/', include('allauth.urls')),
+    path('project/<int:project_id>/file/<int:file_id>/', views.view_file, name='view_file'),
 ]

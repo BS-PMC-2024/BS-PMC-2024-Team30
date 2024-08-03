@@ -1,6 +1,8 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from .models import User, Project, CodeFile, Directory
+from .models import User, Project, File, Directory
+import os
+
 class CustomUserCreationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = User
@@ -31,11 +33,42 @@ class ProjectForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Project name'}),
         }
         
-class CodeFileUploadForm(forms.ModelForm):
+class CodeFileForm(forms.ModelForm):
     class Meta:
-        model = CodeFile
-        fields = ['directory', 'file', 'name']
+        model = File
+        fields = ['file', 'directory']
+        widgets = {
+            'directory': forms.Select(attrs={'class': 'form-control'})
+        }
 
+    def clean_file(self):
+        file = self.cleaned_data.get('file')
+        if file:
+            # Check if file extension is one of the accepted code file extensions
+            allowed_extensions = ['.py', '.js', '.java', '.c', '.cpp', '.html', '.css']
+            extension = os.path.splitext(file.name)[1].lower()
+            if extension not in allowed_extensions:
+                raise forms.ValidationError('Invalid file type. Please upload a code file.')
+        return file
+    
+class DocumentFileForm(forms.ModelForm):
+    class Meta:
+        model = File
+        fields = ['file', 'directory']
+        widgets = {
+            'directory': forms.Select(attrs={'class': 'form-control'})
+        }
+
+    def clean_file(self):
+        file = self.cleaned_data.get('file')
+        if file:
+            # Check if file extension is one of the accepted document file extensions
+            allowed_extensions = ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt']
+            extension = os.path.splitext(file.name)[1].lower()
+            if extension not in allowed_extensions:
+                raise forms.ValidationError('Invalid file type. Please upload a document file.')
+        return file
+    
 class DirectoryForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         project = kwargs.pop('project', None)

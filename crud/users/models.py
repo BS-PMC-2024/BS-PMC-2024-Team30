@@ -51,10 +51,9 @@ class Directory(models.Model):
             return f"{self.parent.full_path}/{self.name}"
         return self.name
 
-class CodeFile(models.Model):
-    directory = models.ForeignKey(Directory, related_name='files', on_delete=models.CASCADE)
-    file = models.FileField(upload_to='project_files/')
-    name = models.CharField(max_length=255)
-
-    def __str__(self):
-        return self.name
+class File(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    directory = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='files')
+    file = models.FileField(upload_to='files/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    file_type = models.CharField(max_length=10, choices=[('code', 'Code'), ('document', 'Document')])
