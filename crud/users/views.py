@@ -385,7 +385,8 @@ def project_code(request, pk):
     project = get_object_or_404(Project, pk=pk)
     directories = Directory.objects.filter(project=project)
     code_files = File.objects.filter(project=project, file_type='code')
-
+    print("Directories:", directories)
+    
     if request.method == 'POST':
         form = CodeFileForm(request.POST, request.FILES)
         if form.is_valid():
@@ -417,15 +418,15 @@ def project_code(request, pk):
             except Exception as e:
                 return HttpResponse(f"An error occurred: {e}", status=500)
 
-            return redirect('project_code', pk=project.id)
+            return redirect('users/project_code', pk=project.id)
     else:
         form = CodeFileForm()
 
     return render(request, 'users/project_code.html', {
-        'form': form,
-        'directories': directories,
         'project': project,
+        'form': form,
         'code_files': code_files,
+        'directories': directories,  # Pass directories to the template
     })
 
 @login_required
@@ -598,28 +599,12 @@ def get_permissions(request, pk):
     ]
     return JsonResponse(permissions_data, safe=False)
 
-
-
 def project_detail(request, pk):
     project = get_object_or_404(Project, pk=pk)
     permission = Permission.objects.filter(user=request.user, project=project, permission_type='view').exists()
     if not permission and project.manager != request.user:
         raise PermissionDenied
     return render(request, 'users/project_detail.html', {'project': project})
-
-def project_documents(request, pk):
-    project = get_object_or_404(Project, pk=pk)
-    permission = Permission.objects.filter(user=request.user, project=project, permission_type='view').exists()
-    if not permission and project.manager != request.user:
-        raise PermissionDenied
-    return render(request, 'users/project_documents.html', {'project': project})
-
-def project_code(request, pk):
-    project = get_object_or_404(Project, pk=pk)
-    permission = Permission.objects.filter(user=request.user, project=project, permission_type='view').exists()
-    if not permission and project.manager != request.user:
-        raise PermissionDenied
-    return render(request, 'users/project_code.html', {'project': project})
 
 def project_settings(request, pk):
     project = get_object_or_404(Project, pk=pk)
