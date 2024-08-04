@@ -1,0 +1,35 @@
+{% extends 'layout.html' %}
+
+{% block title %}Manage Directories{% endblock %}
+
+{% block content %}
+    <h1>{{ project.name }} - Manage Directories</h1>
+    {% include 'navbar.html' %}
+
+    <h2>Create a New Directory</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-secondary">Create Directory</button>
+    </form>
+
+    <h2>Existing Directories</h2>
+    <ul class="list-group">
+        {% for directory in directories %}
+            <li class="list-group-item">
+                <a href="{% url 'view_directory' directory.id %}">{{ directory.name }}</a>
+                <ul>
+                    {% for subdirectory in directory.subdirectories.all %}
+                        <li>
+                            <a href="{% url 'view_directory' subdirectory.id %}">{{ subdirectory.name }}</a>
+                        </li>
+                    {% empty %}
+                        <li>No subdirectories.</li>
+                    {% endfor %}
+                </ul>
+            </li>
+        {% empty %}
+            <li>No directories created yet.</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

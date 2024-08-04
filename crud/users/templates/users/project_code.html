@@ -1,0 +1,26 @@
+{% extends 'layout.html' %}
+
+{% block title %}Project Code{% endblock %}
+
+{% block content %}
+    <h1>{{ project.name }} - Code files</h1>
+    {% include 'navbar.html' %}
+
+    <h2>Upload Code File</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-secondary">Upload Code File</button>
+    </form>
+
+    <h2>Existing Code Files</h2>
+    <ul>
+        {% for file in code_files %}
+        <li>
+            <a href="{% url 'view_file' project_id=project.id file_id=file.id %}">{{ file.file.name }}</a>
+        </li>
+        {% empty %}
+            <li>No code files found.</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

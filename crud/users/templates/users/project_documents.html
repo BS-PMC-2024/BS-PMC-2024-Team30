@@ -1,0 +1,26 @@
+{% extends 'layout.html' %}
+
+{% block title %}Project Documents{% endblock %}
+
+{% block content %}
+    <h1>{{ project.name }} - Document files</h1>
+    {% include 'navbar.html' %}
+
+    <h2>Upload Document File</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-secondary">Upload Document File</button>
+    </form>
+    <!-- Existing Document Files -->
+    <h2>Existing Document Files</h2>
+    <ul>
+        {% for file in document_files %}
+            <li>
+                <a href="{% url 'view_file' project_id=project.id file_id=file.id %}">{{ file.file.name }}</a>
+            </li>
+        {% empty %}
+            <li>No document files found.</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

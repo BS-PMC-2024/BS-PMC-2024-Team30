@@ -1,0 +1,60 @@
+{% extends 'layout.html' %}
+
+{% block title %}View Directory{% endblock %}
+
+{% block content %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'manage_directories' project_id=directory.project.pk %}">Manage Directories</a></li>
+            {% for dir in breadcrumb %}
+                {% if not forloop.last %}
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'view_directory' directory_id=dir.id %}">{{ dir.name }}</a>
+                    </li>
+                {% else %}
+                    <li class="breadcrumb-item active" aria-current="page">{{ dir.name }}</li>
+                {% endif %}
+            {% endfor %}
+        </ol>
+    </nav>
+
+    <form method="post" action="{% url 'delete_directory' directory_id=directory.id %}" id="delete-form">
+        {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.get_full_path }}">
+        <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete()">Delete Directory</button>
+    </form>
+
+    <script>
+        function confirmDelete() {
+            if (confirm("Are you sure you want to delete this directory and all its subdirectories?")) {
+                document.getElementById('delete-form').submit();
+            }
+        }
+    </script>
+
+    <h2>Subdirectories</h2>
+    <ul>
+        {% for subdirectory in directory.subdirectories.all %}
+            <li><a href="{% url 'view_directory' directory_id=subdirectory.id %}">{{ subdirectory.name }}</a></li>
+        {% empty %}
+            <li>No subdirectories.</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Files</h2>
+<ul>
+    {% for file in directory.files.all %}
+    <li>
+        <a href="{% url 'view_file' project_id=directory.project.id file_id=file.id %}">{{ file.file.name }}</a>
+        <form method="post" action="{% url 'view_directory' directory_id=directory.id %}" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="file_id" value="{{ file.id }}">
+            <button type="submit" name="delete_file" class="btn btn-danger btn-sm">Delete</button>
+        </form>
+    </li>
+    {% empty %}
+        <li>No files in this directory.</li>
+    {% endfor %}
+</ul>
+
+{% endblock %}
