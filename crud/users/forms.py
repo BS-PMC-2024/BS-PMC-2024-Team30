@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from .models import User, Project, File, Directory
+from .models import User, Project, File, Directory, Invitation
 import os
 
 class CustomUserCreationForm(UserCreationForm):
@@ -82,3 +82,8 @@ class DirectoryForm(forms.ModelForm):
         widgets = {
             'parent': forms.Select(attrs={'class': 'form-control'})
         }
+        
+class InvitationForm(forms.ModelForm):
+    class Meta:
+        model = Invitation
+        fields = ['email']

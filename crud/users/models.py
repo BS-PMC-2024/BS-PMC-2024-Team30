@@ -37,6 +37,10 @@ class Project(models.Model):
     def __str__(self):
         return self.name
 
+class Invitation(models.Model):
+    email = models.EmailField()
+    project = models.ForeignKey(Project, related_name='invitations', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 class Permission(models.Model):
     VIEW = 'view'
@@ -55,6 +59,7 @@ class Permission(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.get_permission_type_display()} - {self.project.name}"
+    
 class Directory(models.Model):
     name = models.CharField(max_length=100)
     project = models.ForeignKey(Project, related_name='directories', on_delete=models.CASCADE)

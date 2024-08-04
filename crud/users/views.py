@@ -3,12 +3,12 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib.auth import login, authenticate, logout
 from django.core.mail import send_mail
-from .models import User, Project, Permission, File, Directory
+from .models import User, Project, Permission, File, Directory, Invitation
 from django.template.loader import render_to_string
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 from django.http import HttpResponseForbidden
-from .forms import CustomUserCreationForm, LoginForm, VerificationForm
+from .forms import CustomUserCreationForm, LoginForm, VerificationForm, InvitationForm
 from .forms import ProjectForm, DirectoryForm
 from django.http import HttpResponseForbidden, HttpResponse
 from .forms import CustomUserCreationForm, LoginForm, VerificationForm
@@ -27,6 +27,8 @@ from django.contrib import messages
 #project delete add"
 import requests
 import base64
+
+
 
 logger = logging.getLogger(__name__)
 @login_required
@@ -109,13 +111,8 @@ def get_directory_path(directory):
         directory = directory.parent
     return '/'.join(reversed(path_parts))
 
-def project_detail(request, pk):
-    project = get_object_or_404(Project, pk=pk)
-    return render(request, 'users/project_detail.html', {'project': project})
 
-def project_settings(request, pk):
-    project = get_object_or_404(Project, pk=pk)
-    return render(request, 'users/project_settings.html', {'project': project})
+
 
 def upload_file_to_github(access_token, path, content, message="Initial commit"):
     url = f"https://api.github.com/repos/{settings.GITHUB_REPO}/contents/{path}"
@@ -428,6 +425,14 @@ def project_code(request, pk):
         'code_files': code_files,
         'directories': directories,  # Pass directories to the template
     })
+@login_required
+def developer_home(request):
+    if request.user.persona != 'developer':
+        return redirect('home')
+    
+    user = request.user
+    projects = Project.objects.filter(team_members=user)
+    return render(request, 'users/developer_home.html', {'projects': projects})
 
 @login_required
 def manager_home(request):
@@ -443,14 +448,8 @@ def manager_home(request):
             emails = form.cleaned_data['team_member_emails'].split(',')
             for email in emails:
                 email = email.strip()
-                try:
-                    user = User.objects.get(email=email)
-                    # Send request to join project
-                    send_project_request_email(request, user, project)
-                except User.DoesNotExist:
-                    # Send invitation to sign up and join project
-                    send_invitation_email(request, email, project)
-            return redirect('manager_home')
+                send_invitation_email(request, email,project.id)
+            return redirect('users/manager_home')
     else:
         form = ProjectForm()
 
@@ -458,25 +457,33 @@ def manager_home(request):
 
     return render(request, 'users/manager_home.html', {'form': form, 'projects': projects})
 
-def send_project_request_email(request, user, project):
-    current_site = get_current_site(request)
-    mail_subject = f'Invitation to join project {project.name}'
-    message = render_to_string('users/project_request_email.html', {
-        'user': user,
-        'domain': current_site.domain,
-        'project': project,
-    })
-    send_mail(mail_subject, message, 'shohamdimri@gmail.com', [user.email])
 
-def send_invitation_email(request, email, project):
-    current_site = get_current_site(request)
-    mail_subject = f'Invitation to join {current_site.domain} and project {project.name}'
-    message = render_to_string('users/project_invitation_email.html', {
-        'domain': current_site.domain,
-        'project': project,
-        'signup_url': reverse('register'),
-    })
-    send_mail(mail_subject, message, 'shohamdimri@gmail.com', [email])
+@login_required
+def send_invitation_email(request, email, project_id):
+    project = get_object_or_404(Project, id=project_id)
+    
+    # Create an Invitation object
+    invitation = Invitation(email=email, project=project)
+    invitation.save()
+    
+    # Send email
+    accept_url = request.build_absolute_uri(reverse('accept_invitation', args=[invitation.id]))
+    email_subject = f"Invitation to join project {project.name}"
+    email_body = f"Hi,\n\nYou have been invited to join the project '{project.name}'.\n\nPlease click the link below to accept the invitation:\n{accept_url}\n\nBest regards,\nProject Management Team"
+    send_mail(email_subject, email_body, 'shohamdimri@gmail.com', [invitation.email])
+
+def accept_invitation(request, invitation_id):
+    invitation = get_object_or_404(Invitation, id=invitation_id)
+    
+    if request.user.is_authenticated:
+        invitation.project.team_members.add(request.user)
+        project_id = invitation.project.id
+        invitation.delete()
+        return redirect('project_detail', pk=project_id)
+    else:
+        # User is not logged in, redirect to login page
+        login_url = f"{reverse('login')}?next={reverse('accept_invitation', args=[invitation.id])}"
+        return redirect(login_url)
 
 def register(request):
     if request.method == 'POST':
@@ -605,8 +612,9 @@ def get_permissions(request, pk):
 
 def project_detail(request, pk):
     project = get_object_or_404(Project, pk=pk)
-    permission = Permission.objects.filter(user=request.user, project=project, permission_type='view').exists()
-    if not permission and project.manager != request.user:
+    user = request.user
+    
+    if user != project.manager and not project.team_members.filter(id=user.id).exists():
         raise PermissionDenied
     return render(request, 'users/project_detail.html', {'project': project})
 

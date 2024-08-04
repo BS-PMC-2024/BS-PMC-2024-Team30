@@ -1,0 +1,17 @@
+{% extends 'layout.html' %}
+
+{% block title %}Send Invitation{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Send Invitation for {{ project.name }}</h1>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="team_member_emails">Team Member Emails (comma separated)</label>
+            <input type="text" name="team_member_emails" id="team_member_emails" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-primary">Send Invitations</button>
+    </form>
+</div>
+{% endblock %}
