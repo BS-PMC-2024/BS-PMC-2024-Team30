@@ -7,6 +7,9 @@ from .models import User, Project, Permission, File, Directory
 from django.template.loader import render_to_string
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
+from django.http import HttpResponseForbidden
+from .forms import CustomUserCreationForm, LoginForm, VerificationForm
+from .forms import ProjectForm, CodeFileUploadForm, DirectoryForm
 from django.http import HttpResponseForbidden, HttpResponse
 from .forms import CustomUserCreationForm, LoginForm, VerificationForm
 from .forms import ProjectForm, DocumentFileForm, DirectoryForm, CodeFileForm
@@ -17,10 +20,22 @@ import uuid
 import logging
 from .github_service import GitHubService
 from django.conf import settings
+from .models import Project  # Make sure to import your Project model
+
+#project delete add"
 import requests
 import base64
 
 logger = logging.getLogger(__name__)
+@login_required
+def delete_project(request, project_id):
+    project = get_object_or_404(Project, id=project_id, owner=request.user)
+    if request.method == 'POST':
+        project_name = project.name
+        project.delete()
+        messages.success(request, f'Project "{project_name}" has been deleted.')
+        return redirect('home')  # or wherever you want to redirect after deletion
+    return redirect('project_settings', project_id=project_id)
 
 def get_file_from_github(access_token, repo, file_path):
     url = f"https://api.github.com/repos/{repo}/contents/{file_path}"

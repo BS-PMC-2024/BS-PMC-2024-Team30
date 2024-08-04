@@ -17,6 +17,8 @@ urlpatterns = [
     path('project/<int:project_id>/directories/', views.manage_directories, name='manage_directories'),
     path('directory/<int:directory_id>/', views.view_directory, name='view_directory'),
     path('directory/<int:directory_id>/delete/', views.delete_directory, name='delete_directory'),
+    #add for delete project
+    path('project/<int:project_id>/delete/', views.delete_project, name='delete_project'),
     path('accounts/', include('allauth.urls')),
     path('project/<int:project_id>/file/<int:file_id>/', views.view_file, name='view_file'),
 ]
