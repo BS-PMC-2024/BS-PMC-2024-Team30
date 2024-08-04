@@ -12,6 +12,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+SITE_ID = 1
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -20,6 +22,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.github',
     'users',  # Ensure your users app is listed here
     'noss',   # Ensure your noss app is listed here
 
@@ -34,8 +41,14 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'crud.middleware.EmailVerificationMiddleware',  
-
+    'allauth.account.middleware.AccountMiddleware',
 ]
+
+AUTHENTICATION_BACKENDS = (
+'django.contrib.auth.backends.ModelBackend',
+
+)
+
 
 ROOT_URLCONF = 'crud.urls'
 
@@ -112,7 +125,6 @@ EMAIL_HOST = 'smtp.sendgrid.net'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'apikey'  # This is literal, do not change it to your SendGrid username
-EMAIL_HOST_PASSWORD = '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'
 
 # Redirect URLs
 LOGIN_URL = 'login'
