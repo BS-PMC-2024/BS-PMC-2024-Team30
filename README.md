@@ -65,7 +65,18 @@ Our project management software aims to:
 
 To get started with our project management software:
 
-### Installation
+To run the project you need to add the following line in the settings file: EMAIL_HOST_PASSWORD = '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' # Your SendGrid API key
+In line 115 
+
+And if for some reason you get an error "
+Run Retz, the following commands in the terminal:
+1.source venv/bin/activate
+2. pip install django
+3.cd /Users/omershay/Desktop/NosPr/BS-PMC-2024-Team30/
+python3 manage.py runserver
+(depends on the location on your computer)
+3. python3 manage.py runserver 
+(if you are on a Macbook)
 
 Clone the repository and install dependencies:
 
