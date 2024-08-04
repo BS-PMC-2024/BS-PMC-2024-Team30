@@ -27,7 +27,6 @@ class User(AbstractUser):
         related_query_name='custom_user',
     )
 
-# models.py
 class Project(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)  # Added description field
@@ -38,3 +37,24 @@ class Project(models.Model):
     def __str__(self):
         return self.name
 
+class Directory(models.Model):
+    name = models.CharField(max_length=100)
+    project = models.ForeignKey(Project, related_name='directories', on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', null=True, blank=True, related_name='subdirectories', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def full_path(self):
+        if self.parent:
+            return f"{self.parent.full_path}/{self.name}"
+        return self.name
+
+class CodeFile(models.Model):
+    directory = models.ForeignKey(Directory, related_name='files', on_delete=models.CASCADE)
+    file = models.FileField(upload_to='project_files/')
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name

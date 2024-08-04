@@ -2,16 +2,43 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
 from django.core.mail import send_mail
-from .models import User, Project
+from .models import User, Project, CodeFile, Directory
 from django.template.loader import render_to_string
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
-from .forms import CustomUserCreationForm, LoginForm, VerificationForm, ProjectForm
+from django.http import HttpResponseForbidden
+from .forms import CustomUserCreationForm, LoginForm, VerificationForm
+from .forms import ProjectForm, CodeFileUploadForm, DirectoryForm
 import uuid
 import logging
+from .github_service import GitHubService
+from django.conf import settings
+from .models import Project  # Make sure to import your Project model
+
+#project delete add"
 
 logger = logging.getLogger(__name__)
+@login_required
+def delete_project(request, project_id):
+    project = get_object_or_404(Project, id=project_id, owner=request.user)
+    if request.method == 'POST':
+        project_name = project.name
+        project.delete()
+        messages.success(request, f'Project "{project_name}" has been deleted.')
+        return redirect('home')  # or wherever you want to redirect after deletion
+    return redirect('project_settings', project_id=project_id)
 
+def upload_code(request, project_id):
+    if request.method == 'POST':
+        file = request.FILES['file']
+        github = GitHubService()
+        content = file.read()
+        response = github.upload_file(f'project_{project_id}/{file.name}', content)
+        if 'content' in response:
+            return redirect('project_detail', pk=project_id)
+        else:
+            return render(request, 'upload.html', {'error': response.get('message')})
+    return render(request, 'upload.html')
 
 def project_detail(request, pk):
     project = get_object_or_404(Project, pk=pk)
@@ -25,9 +52,85 @@ def project_documents(request, pk):
     project = get_object_or_404(Project, pk=pk)
     return render(request, 'users/project_documents.html', {'project': project})
 
+def manage_directories(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+
+    if request.method == 'POST':
+        form = DirectoryForm(request.POST, project=project)
+        if form.is_valid():
+            directory = form.save(commit=False)
+            directory.project = project
+            directory.save()
+            return redirect('manage_directories', project_id=project.id)
+    else:
+        form = DirectoryForm(project=project)
+
+    # Fetch only top-level directories for the current project
+    directories = Directory.objects.filter(project=project, parent__isnull=True)
+
+    return render(request, 'users/manage_directories.html', {
+        'form': form,
+        'directories': directories,
+        'project': project,
+    })
+
+def view_directory(request, directory_id):
+    directory = get_object_or_404(Directory, pk=directory_id)
+
+    # Ensure the user has permission to view this directory
+    if directory.project.manager != request.user:
+        return HttpResponseForbidden("You do not have permission to view this directory.")
+
+    # Collect parent directories for breadcrumb navigation
+    breadcrumb = []
+    current_directory = directory
+    while current_directory:
+        breadcrumb.append(current_directory)
+        current_directory = current_directory.parent
+    breadcrumb.reverse()  # To display in correct order
+
+    return render(request, 'users/view_directory.html', {
+        'directory': directory,
+        'breadcrumb': breadcrumb,
+    })
+
+def delete_directory(request, directory_id):
+    directory = get_object_or_404(Directory, pk=directory_id)
+    
+    #make sure the user has permission to delete this directory
+    if directory.project.manager != request.user:
+        return HttpResponseForbidden("You do not have permission to delete this directory.")
+    
+    # Recursive deletion of subdirectories
+    def delete_subdirectories(directory):
+        for subdirectory in directory.subdirectories.all():
+            delete_subdirectories(subdirectory)
+        directory.delete()
+    
+    delete_subdirectories(directory)
+    
+    return redirect('project_code', pk=directory.project.pk)
+
 def project_code(request, pk):
-    project = get_object_or_404(Project, pk=pk)
-    return render(request, 'users/project_code.html', {'project': project})
+    project = Project.objects.get(pk=pk)
+    if request.method == 'POST':
+        form = CodeFileUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            code_file = form.save(commit=False)
+            code_file.directory = Directory.objects.get(pk=request.POST['directory'])
+            code_file.save()
+            return redirect('project_code', pk=project.pk)
+    else:
+        form = CodeFileUploadForm()
+
+    directories = project.directories.all()
+    files = CodeFile.objects.filter(directory__in=directories)
+    return render(request, 'users/project_code.html', {
+        'project': project,
+        'file_form': form,
+        'directories': directories,
+        'files': files
+    })
 
 @login_required
 def manager_home(request):

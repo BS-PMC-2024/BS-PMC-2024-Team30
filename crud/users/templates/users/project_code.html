@@ -1,9 +1,35 @@
-
+<!-- project_code.html -->
 {% extends 'layout.html' %}
 
 {% block title %}Project Code{% endblock %}
 
 {% block content %}
-    <h1>{{ project.name }} - Code</h1>
-    
+    <h1>{{ project.name }} - Script files</h1>
+    {% include 'navbar.html' %}
+
+    <h2>Upload Code File</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ file_form.as_p }}
+        <button type="submit" class="btn btn-primary">Upload File</button>
+    </form>
+
+    <!-- Existing Files -->
+    <h2>Existing Code Files</h2>
+    <ul>
+        {% for directory in directories %}
+            <h3>{{ directory.name }}</h3>
+            <ul>
+                {% for file in directory.files.all %}
+                    <li>
+                        <a href="{{ file.file.url }}" target="_blank">{{ file.name }}</a>
+                    </li>
+                {% empty %}
+                    <li>No files in this directory.</li>
+                {% endfor %}
+            </ul>
+        {% empty %}
+            <li>No directories created yet.</li>
+        {% endfor %}
+    </ul>
 {% endblock %}
