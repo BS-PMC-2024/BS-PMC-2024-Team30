@@ -9,6 +9,9 @@ from django.urls import reverse
 from django.http import HttpResponseForbidden
 from .forms import CustomUserCreationForm, LoginForm, VerificationForm
 from .forms import ProjectForm, CodeFileUploadForm, DirectoryForm
+from django.http import HttpResponseForbidden
+from .forms import CustomUserCreationForm, LoginForm, VerificationForm
+from .forms import ProjectForm, CodeFileUploadForm, DirectoryForm
 import uuid
 import logging
 from .github_service import GitHubService
@@ -51,6 +54,65 @@ def project_settings(request, pk):
 def project_documents(request, pk):
     project = get_object_or_404(Project, pk=pk)
     return render(request, 'users/project_documents.html', {'project': project})
+
+def manage_directories(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+
+    if request.method == 'POST':
+        form = DirectoryForm(request.POST, project=project)
+        if form.is_valid():
+            directory = form.save(commit=False)
+            directory.project = project
+            directory.save()
+            return redirect('manage_directories', project_id=project.id)
+    else:
+        form = DirectoryForm(project=project)
+
+    # Fetch only top-level directories for the current project
+    directories = Directory.objects.filter(project=project, parent__isnull=True)
+
+    return render(request, 'users/manage_directories.html', {
+        'form': form,
+        'directories': directories,
+        'project': project,
+    })
+
+def view_directory(request, directory_id):
+    directory = get_object_or_404(Directory, pk=directory_id)
+
+    # Ensure the user has permission to view this directory
+    if directory.project.manager != request.user:
+        return HttpResponseForbidden("You do not have permission to view this directory.")
+
+    # Collect parent directories for breadcrumb navigation
+    breadcrumb = []
+    current_directory = directory
+    while current_directory:
+        breadcrumb.append(current_directory)
+        current_directory = current_directory.parent
+    breadcrumb.reverse()  # To display in correct order
+
+    return render(request, 'users/view_directory.html', {
+        'directory': directory,
+        'breadcrumb': breadcrumb,
+    })
+
+def delete_directory(request, directory_id):
+    directory = get_object_or_404(Directory, pk=directory_id)
+    
+    #make sure the user has permission to delete this directory
+    if directory.project.manager != request.user:
+        return HttpResponseForbidden("You do not have permission to delete this directory.")
+    
+    # Recursive deletion of subdirectories
+    def delete_subdirectories(directory):
+        for subdirectory in directory.subdirectories.all():
+            delete_subdirectories(subdirectory)
+        directory.delete()
+    
+    delete_subdirectories(directory)
+    
+    return redirect('project_code', pk=directory.project.pk)
 
 def manage_directories(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
