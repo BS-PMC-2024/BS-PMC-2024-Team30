@@ -1,0 +1,42 @@
+<!-- users/templates/users/manager_home.html -->
+{% extends 'layout.html' %}
+
+{% block title %}Developer Home{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="my-4">Welcome, {{ user.username }}</h1>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Your Projects</h2>
+                </div>
+                <div class="card-body">
+                    {% if projects %}
+                        <ul class="list-group">
+                            {% for project in projects %}
+                                <li class="list-group-item">
+                                    <a href="{% url 'project_detail' pk=project.pk %}" class="h5">
+                                        <strong>{{ project.name }}</strong>
+                                    </a>
+                                    <p>{{ project.description|default:"No description available." }}</p>
+                                    <ul class="list-unstyled mt-2">
+                                        {% for member in project.team_members.all %}
+                                            <li>{{ member.username }}</li>
+                                        {% empty %}
+                                            <li>No team members assigned.</li>
+                                        {% endfor %}
+                                    </ul>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No projects found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -14,4 +14,4 @@ def manager_home(request):
 
 @login_required
 def developer_home(request):
-    return render(request, 'noss/developer_home.html')
+    return render(request, 'users/developer_home.html')
