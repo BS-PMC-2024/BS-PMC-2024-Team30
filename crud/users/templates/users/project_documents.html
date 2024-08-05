@@ -10,14 +10,24 @@
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}
+        <label for="document_type">Document Type:</label>
+        <select id="document_type" name="document_type">
+            <option value="Initiation Document">Initiation Document</option>
+            <option value="Requirements Document">Requirements Document</option>
+            <option value="Team Placement Document">Team Placement Document</option>
+            <option value="readme">README</option>
+            <option value="Historical Profit Report (Annual)">Historical Profit Report (Annual)</option>
+            <option value="Projected Profit Report (Annual)">Projected Profit Report (Annual)</option>
+        </select>
         <button type="submit" class="btn btn-secondary">Upload Document File</button>
     </form>
+
     <!-- Existing Document Files -->
     <h2>Existing Document Files</h2>
     <ul>
         {% for file in document_files %}
             <li>
-                <a href="{% url 'view_file' project_id=project.id file_id=file.id %}">{{ file.file.name }}</a>
+                <a href="{% url 'download_file' pk=project.id file_id=file.id %}">Download {{ file.file.name }}</a>
             </li>
         {% empty %}
             <li>No document files found.</li>

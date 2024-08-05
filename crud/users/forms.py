@@ -41,10 +41,15 @@ class CodeFileForm(forms.ModelForm):
             'directory': forms.Select(attrs={'class': 'form-control'})
         }
 
+    def __init__(self, *args, **kwargs):
+        project = kwargs.pop('project', None)
+        super().__init__(*args, **kwargs)
+        if project:
+            self.fields['directory'].queryset = Directory.objects.filter(project=project)
+
     def clean_file(self):
         file = self.cleaned_data.get('file')
         if file:
-            # Check if file extension is one of the accepted code file extensions
             allowed_extensions = ['.py', '.js', '.java', '.c', '.cpp', '.html', '.css']
             extension = os.path.splitext(file.name)[1].lower()
             if extension not in allowed_extensions:
@@ -54,7 +59,7 @@ class CodeFileForm(forms.ModelForm):
 class DocumentFileForm(forms.ModelForm):
     class Meta:
         model = File
-        fields = ['file', 'directory']
+        fields = ['file']
         widgets = {
             'directory': forms.Select(attrs={'class': 'form-control'})
         }
@@ -87,3 +92,6 @@ class InvitationForm(forms.ModelForm):
     class Meta:
         model = Invitation
         fields = ['email']
+        
+class EditFileForm(forms.Form):
+    content = forms.CharField(widget=forms.Textarea, label="File Content")

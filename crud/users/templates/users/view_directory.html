@@ -45,7 +45,11 @@
 <ul>
     {% for file in directory.files.all %}
     <li>
-        <a href="{% url 'view_file' project_id=directory.project.id file_id=file.id %}">{{ file.file.name }}</a>
+        {% if file.file_type == 'document' %}
+        <a href="{% url 'download_file' pk=project.id file_id=file.id %}">Download {{ file.file.name }}</a>
+        {% else %}
+        <a href="{% url 'view_file' pk=project.id file_id=file.id %}">{{ file.file.name }}</a>
+        {% endif %}
         <form method="post" action="{% url 'view_directory' directory_id=directory.id %}" style="display:inline;">
             {% csrf_token %}
             <input type="hidden" name="file_id" value="{{ file.id }}">

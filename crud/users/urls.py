@@ -20,7 +20,8 @@ urlpatterns = [
     path('directory/<int:directory_id>/delete/', views.delete_directory, name='delete_directory'),
     path('project/<int:project_id>/delete/', views.delete_project, name='delete_project'),
     path('accounts/', include('allauth.urls')),
-    path('project/<int:project_id>/file/<int:file_id>/', views.view_file, name='view_file'),
+    path('project/<int:pk>/file/<int:file_id>/', views.view_file, name='view_file'),
     path('project/<int:project_id>/send_invitation/', views.send_invitation_email, name='send_invitation_email'),
     path('accept_invitation/<int:invitation_id>/', views.accept_invitation, name='accept_invitation'),
+    path('download/<int:pk>/<int:file_id>/', views.download_file, name='download_file'),
 ]

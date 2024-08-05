@@ -7,11 +7,11 @@ from .models import User, Project, Permission, File, Directory, Invitation
 from django.template.loader import render_to_string
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, Http404
 from .forms import CustomUserCreationForm, LoginForm, VerificationForm, InvitationForm
 from .forms import ProjectForm, DirectoryForm
 from django.http import HttpResponseForbidden, HttpResponse
-from .forms import CustomUserCreationForm, LoginForm, VerificationForm
+from .forms import CustomUserCreationForm, LoginForm, VerificationForm, EditFileForm
 from .forms import ProjectForm, DocumentFileForm, DirectoryForm, CodeFileForm
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
@@ -22,7 +22,7 @@ from .github_service import GitHubService
 from django.conf import settings
 from .models import Project  # Make sure to import your Project model
 from django.contrib import messages
-
+import os
 
 #project delete add"
 import requests
@@ -83,26 +83,76 @@ def delete_file_from_github(access_token, repo, file_path):
     print(f"File {file_path} successfully deleted.")
 
     
-        
-def view_file(request, project_id, file_id):
-    project = get_object_or_404(Project, pk=project_id)
+def download_file(request, pk, file_id):
+    file = get_object_or_404(File, id=file_id)
+    project = get_object_or_404(Project, id=pk)
+    url = f"https://api.github.com/repos/{settings.GITHUB_REPO}/contents/{project.name}{project.id}/{file.directory}/{file.file.name[6:]}"
+    file_path = file.file.path
+    if not os.path.exists(file_path):
+        raise Http404("File not found")
+    
+    # Serve the file
+    with open(file_path, 'rb') as f:
+        response = HttpResponse(f.read(), content_type='application/octet-stream')
+        response['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}"'
+        return response
+    
+def view_file(request, pk, file_id):
+    project = get_object_or_404(Project, pk=pk)
     file = get_object_or_404(File, id=file_id)
     access_token = settings.GITHUB_TOKEN
     repo = settings.GITHUB_REPO
-
+    filename = file.file.name[6:]
     directory_path = get_directory_path(file.directory)
-    try:
-        file_content = get_file_from_github(access_token, repo, f"{project.name}{project.id}/{directory_path}/{file.file.name}")
+    
+    if request.method == 'POST':
+        file_content = request.POST.get('file_content', '')
+        try:
+            # Update the file content on GitHub
+            update_file_on_github(access_token, repo, f"{project.name}{project.id}/{directory_path}/{filename}", file_content)
+            # Debugging: Print values before redirect
+            print(f"Redirecting to view_file with pk={pk} and file_id={file_id}")
+            return redirect('view_file', pk=pk, file_id=file_id)
+        except requests.exceptions.HTTPError as http_err:
+            print(f"HTTP error occurred: {http_err}")
+            return HttpResponse(f"HTTP error occurred: {http_err}", status=500)
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            return HttpResponse(f"An unexpected error occurred: {e}", status=500)
+    else:
+        try:
+            file_content = get_file_from_github(access_token, repo, f"{project.name}{project.id}/{directory_path}/{filename}")
+            # Debugging: Print values
+            print(f"Rendering view_file with pk={pk} and file_id={file_id}")
+            return render(request, 'users/view_file.html', {'project': project, 'file_content': file_content, 'file_name': filename, 'file_id': file_id})
+        except requests.exceptions.HTTPError as http_err:
+            print(f"HTTP error occurred: {http_err}")
+            return HttpResponse(f"HTTP error occurred: {http_err}", status=500)
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            return HttpResponse(f"An unexpected error occurred: {e}", status=500)
+        
+def update_file_on_github(access_token, repo, path, content):
+    url = f'https://api.github.com/repos/{repo}/contents/{path}'
+    headers = {
+        'Authorization': f'token {access_token}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+    
+    # Get the SHA of the file to update
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    sha = response.json().get('sha')
 
-        return render(request, 'users/view_file.html', {'file_content': file_content, 'file_name': file.file.name})
-    except requests.exceptions.HTTPError as http_err:
-        print(f"HTTP error occurred: {http_err}")
-        return HttpResponse(f"HTTP error occurred: {http_err}", status=500)
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return HttpResponse(f"An unexpected error occurred: {e}", status=500)
-
-
+    data = {
+        'message': 'Update file content',
+        'content': base64.b64encode(content.encode()).decode(),
+        'sha': sha
+    }
+    
+    response = requests.put(url, headers=headers, json=data)
+    response.raise_for_status()
+    
 #helper function to get path of a file or directory
 def get_directory_path(directory):
     path_parts = []
@@ -174,7 +224,7 @@ def manage_directories(request, project_id):
 
 def view_directory(request, directory_id):
     directory = get_object_or_404(Directory, pk=directory_id)
-    
+    project = directory.project
     if directory.project.manager != request.user:
         return HttpResponseForbidden("You do not have permission to view this directory.")
 
@@ -189,7 +239,6 @@ def view_directory(request, directory_id):
                 directory_path = get_directory_path(file.directory)
                 file_path = f"{directory.project.name}/{directory_path}/{file.file.name}"
                 try:
-                    print("1")
                     delete_file_from_github(access_token, repo, file_path)
                 except Exception as e:
                     return HttpResponse(f"An error occurred while deleting the file from GitHub: {e}", status=500)
@@ -208,6 +257,7 @@ def view_directory(request, directory_id):
 
     return render(request, 'users/view_directory.html', {
         'directory': directory,
+        'project': project,
         'breadcrumb': breadcrumb,
     })
 
@@ -302,10 +352,8 @@ def delete_directory(request, directory_id):
     repo = settings.GITHUB_REPO
 
     try:
-        # Delete from GitHub
         delete_directory_from_github(access_token, repo, f"{directory.project.name}/{get_directory_path(directory)}")
         
-        # Delete from the database
         delete_directory_from_database(directory)
         
     except Exception as e:
@@ -332,28 +380,57 @@ def delete_directory_from_database(directory):
 
 def project_documents(request, pk):
     project = get_object_or_404(Project, pk=pk)
-    directories = Directory.objects.filter(project=project)
+    
+    # Get all document files for the project
     document_files = File.objects.filter(project=project, file_type='document')
 
     if request.method == 'POST':
         form = DocumentFileForm(request.POST, request.FILES)
         if form.is_valid():
+            # Save form data without committing to the database yet
             file = form.save(commit=False)
             file.project = project
-            file.directory = Directory.objects.get(id=request.POST['directory'])
-            file.file_type='document'
+            
+            # Get or create the 'project_documents' directory
+            document_directory, created = Directory.objects.get_or_create(
+                project=project,
+                name='project_documents'
+            )
+
+            # Extract file name and extension
+            root, extension = os.path.splitext(file.file.name)
+            document_type = request.POST.get('document_type', 'document')
+            file.directory = document_directory
+            file.file.name = document_type + extension
+            file.file_type = "document"
+            print(file.file.name)
+            print(document_type[:8])
+            existing_file = File.objects.filter(
+                project=project,
+                file_type='document',
+                directory=document_directory,
+                file__icontains=document_type[:8]
+            ).first()
+
+            if existing_file:
+                print("exists")
+                existing_file.delete()
+
+            # Save the new file
             file.save()
+
             try:
                 access_token = settings.GITHUB_TOKEN
                 if not access_token:
                     raise ValueError("GitHub access token is not configured.")
-                
+
+                # Define the path for the file on GitHub
                 directory_path = get_directory_path(file.directory)
-                print(directory_path)
                 filename = file.file.name
-                filename = filename[6:]
-                print(filename)
+                filename = filename[6:]  # Adjust based on your filename structure
                 file_content = file.file.read()
+                
+                # Upload the new file to GitHub
                 upload_file_to_github(
                     access_token,
                     f"{project.name}{project.id}/{directory_path}/{filename}",
@@ -372,7 +449,6 @@ def project_documents(request, pk):
 
     return render(request, 'users/project_documents.html', {
         'form': form,
-        'directories': directories,
         'project': project,
         'document_files': document_files,
     })
@@ -382,14 +458,13 @@ def project_code(request, pk):
     project = get_object_or_404(Project, pk=pk)
     directories = Directory.objects.filter(project=project)
     code_files = File.objects.filter(project=project, file_type='code')
-    print("Directories:", directories)
-    
+
     if request.method == 'POST':
-        form = CodeFileForm(request.POST, request.FILES)
+        form = CodeFileForm(request.POST, request.FILES, project=project)
         if form.is_valid():
             file = form.save(commit=False)
             file.project = project
-            file.directory = Directory.objects.get(id=request.POST['directory'])
+            file.directory = form.cleaned_data['directory']
             file.file_type = 'code'
             file.save()
             try:
@@ -398,10 +473,8 @@ def project_code(request, pk):
                     raise ValueError("GitHub access token is not configured.")
                 
                 directory_path = get_directory_path(file.directory)
-                
-                filename = file.file.name
-                filename = filename[6:]
-                
+                filename = file.file.name[6:]
+
                 file_content = file.file.read()
                 upload_file_to_github(
                     access_token,
@@ -415,16 +488,17 @@ def project_code(request, pk):
             except Exception as e:
                 return HttpResponse(f"An error occurred: {e}", status=500)
 
-            return redirect('users/project_code', pk=project.id)
+            return redirect('project_code', pk=project.id)
     else:
-        form = CodeFileForm()
+        form = CodeFileForm(project=project)
 
     return render(request, 'users/project_code.html', {
         'project': project,
         'form': form,
         'code_files': code_files,
-        'directories': directories,  # Pass directories to the template
+        'directories': directories,
     })
+    
 @login_required
 def developer_home(request):
     if request.user.persona != 'developer':
@@ -474,8 +548,8 @@ def send_invitation_email(request, email, project_id):
 
 def accept_invitation(request, invitation_id):
     invitation = get_object_or_404(Invitation, id=invitation_id)
-    
-    if request.user.is_authenticated:
+    user = request.user
+    if user.is_authenticated and user.persona == "developer" and user not in invitation.project.team_members:
         invitation.project.team_members.add(request.user)
         project_id = invitation.project.id
         invitation.delete()
