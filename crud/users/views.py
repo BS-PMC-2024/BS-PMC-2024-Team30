@@ -449,7 +449,7 @@ def manager_home(request):
             for email in emails:
                 email = email.strip()
                 send_invitation_email(request, email,project.id)
-            return redirect('users/manager_home')
+            return redirect('manager_home')
     else:
         form = ProjectForm()
 
