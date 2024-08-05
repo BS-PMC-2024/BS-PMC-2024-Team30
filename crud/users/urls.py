@@ -13,8 +13,6 @@ urlpatterns = [
     path('project/<int:pk>/settings/', views.project_settings, name='project_settings'),
     path('project/<int:pk>/documents/', views.project_documents, name='project_documents'),
     path('project/<int:pk>/code/', views.project_code, name='project_code'),
-    path('project/<int:pk>/set_permission/', views.set_permission, name='set_permission'),
-    path('project/<int:pk>/permissions/', views.get_permissions, name='get_permissions'),
     path('project/<int:project_id>/directories/', views.manage_directories, name='manage_directories'),
     path('directory/<int:directory_id>/', views.view_directory, name='view_directory'),
     path('directory/<int:directory_id>/delete/', views.delete_directory, name='delete_directory'),
@@ -24,4 +22,5 @@ urlpatterns = [
     path('project/<int:project_id>/send_invitation/', views.send_invitation_email, name='send_invitation_email'),
     path('accept_invitation/<int:invitation_id>/', views.accept_invitation, name='accept_invitation'),
     path('download/<int:pk>/<int:file_id>/', views.download_file, name='download_file'),
+    path('users/permission-error/<int:pk>/', views.permission_error, name='permission_error'),
 ]

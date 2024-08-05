@@ -2,12 +2,14 @@
     <a class="navbar-brand" href="{% url 'project_detail' pk=project.pk %}">Project Menu</a>
     <div class="collapse navbar-collapse">
         <ul class="navbar-nav">
+            {% if project.manager == request.user %}
             <li class="nav-item {% if request.resolver_match.view_name == 'project_settings' %}active{% endif %}">
                 <a class="nav-link" href="{% url 'project_settings' pk=project.pk %}">Project Settings</a>
             </li>
             <li class="nav-item {% if request.resolver_match.view_name == 'manage_directories' %}active{% endif %}">
                 <a class="nav-link" href="{% url 'manage_directories' project_id=project.pk %}">Manage Directories</a>
             </li>
+            {% endif %}
             <li class="nav-item {% if request.resolver_match.view_name == 'project_documents' %}active{% endif %}">
                 <a class="nav-link" href="{% url 'project_documents' pk=project.pk %}">Project Documents</a>
             </li>

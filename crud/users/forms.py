@@ -43,9 +43,17 @@ class CodeFileForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         project = kwargs.pop('project', None)
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        if project:
-            self.fields['directory'].queryset = Directory.objects.filter(project=project)
+        if project and user != project.manager:
+             self.fields['directory'].queryset = Directory.objects.filter(
+                project=project,
+                edit_permissions=user
+            )
+        elif project and user == project.manager:
+            self.fields['directory'].queryset = Directory.objects.filter(
+                project=project,
+            )
 
     def clean_file(self):
         file = self.cleaned_data.get('file')
@@ -74,20 +82,56 @@ class DocumentFileForm(forms.ModelForm):
                 raise forms.ValidationError('Invalid file type. Please upload a document file.')
         return file
     
-class DirectoryForm(forms.ModelForm):
+class UserPermissionForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        permission_type = kwargs.pop('permission_type', None)
+        super().__init__(*args, **kwargs)
+        
+        if user and permission_type:
+            if permission_type == 'view':
+                self.fields['view_permissions'] = forms.ModelMultipleChoiceField(
+                    queryset=User.objects.exclude(id=user.id),
+                    required=False,
+                    widget=forms.CheckboxSelectMultiple
+                )
+            elif permission_type == 'edit':
+                self.fields['edit_permissions'] = forms.ModelMultipleChoiceField(
+                    queryset=User.objects.exclude(id=user.id),
+                    required=False,
+                    widget=forms.CheckboxSelectMultiple
+                )
+
+    
+class DirectoryManagementForm(forms.ModelForm):
+    view_permissions = forms.ModelMultipleChoiceField(
+        queryset=User.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple
+    )
+    edit_permissions = forms.ModelMultipleChoiceField(
+        queryset=User.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple
+    )
+    
     def __init__(self, *args, **kwargs):
         project = kwargs.pop('project', None)
         super().__init__(*args, **kwargs)
         if project:
             self.fields['parent'].queryset = Directory.objects.filter(project=project)
+            if project.manager:
+                # Exclude the manager from the permissions fields
+                self.fields['view_permissions'].queryset = self.fields['view_permissions'].queryset.exclude(id=project.manager.id)
+                self.fields['edit_permissions'].queryset = self.fields['edit_permissions'].queryset.exclude(id=project.manager.id)
     
     class Meta:
         model = Directory
-        fields = ['name', 'parent']
+        fields = ['name', 'parent', 'view_permissions', 'edit_permissions']
         widgets = {
             'parent': forms.Select(attrs={'class': 'form-control'})
         }
-        
+
 class InvitationForm(forms.ModelForm):
     class Meta:
         model = Invitation
@@ -95,3 +139,4 @@ class InvitationForm(forms.ModelForm):
         
 class EditFileForm(forms.Form):
     content = forms.CharField(widget=forms.Textarea, label="File Content")
+ 

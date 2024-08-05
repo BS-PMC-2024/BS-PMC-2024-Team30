@@ -42,28 +42,13 @@ class Invitation(models.Model):
     project = models.ForeignKey(Project, related_name='invitations', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
-class Permission(models.Model):
-    VIEW = 'view'
-    EDIT = 'edit'
-    PERMISSION_CHOICES = [
-        (VIEW, 'View'),
-        (EDIT, 'Edit'),
-    ]
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    permission_type = models.CharField(max_length=4, choices=PERMISSION_CHOICES)
-
-    class Meta:
-        unique_together = ('user', 'project', 'permission_type')
-
-    def __str__(self):
-        return f"{self.user.username} - {self.get_permission_type_display()} - {self.project.name}"
     
 class Directory(models.Model):
     name = models.CharField(max_length=100)
     project = models.ForeignKey(Project, related_name='directories', on_delete=models.CASCADE)
     parent = models.ForeignKey('self', null=True, blank=True, related_name='subdirectories', on_delete=models.CASCADE)
+    view_permissions = models.ManyToManyField(User, related_name='viewable_directories', blank=True)
+    edit_permissions = models.ManyToManyField(User, related_name='editable_directories', blank=True)
 
     def __str__(self):
         return self.name

@@ -9,7 +9,27 @@
     <h2>Create a New Directory</h2>
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
+        {{ form.non_field_errors }}
+        <div class="form-group">
+            {{ form.name.label_tag }}
+            {{ form.name }}
+            {{ form.name.errors }}
+        </div>
+        <div class="form-group">
+            {{ form.parent.label_tag }}
+            {{ form.parent }}
+            {{ form.parent.errors }}
+        </div>
+        <div class="form-group">
+            {{ form.view_permissions.label_tag }}
+            {{ form.view_permissions }}
+            {{ form.view_permissions.errors }}
+        </div>
+        <div class="form-group">
+            {{ form.edit_permissions.label_tag }}
+            {{ form.edit_permissions }}
+            {{ form.edit_permissions.errors }}
+        </div>
         <button type="submit" class="btn btn-secondary">Create Directory</button>
     </form>
 

@@ -3,16 +3,16 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib.auth import login, authenticate, logout
 from django.core.mail import send_mail
-from .models import User, Project, Permission, File, Directory, Invitation
+from .models import User, Project, File, Directory, Invitation
 from django.template.loader import render_to_string
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
-from django.http import HttpResponseForbidden, Http404
+from django.http import HttpResponseForbidden, Http404, HttpResponseRedirect
 from .forms import CustomUserCreationForm, LoginForm, VerificationForm, InvitationForm
-from .forms import ProjectForm, DirectoryForm
+from .forms import ProjectForm, UserPermissionForm
 from django.http import HttpResponseForbidden, HttpResponse
 from .forms import CustomUserCreationForm, LoginForm, VerificationForm, EditFileForm
-from .forms import ProjectForm, DocumentFileForm, DirectoryForm, CodeFileForm
+from .forms import ProjectForm, DocumentFileForm, CodeFileForm, DirectoryManagementForm
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.core.exceptions import PermissionDenied
@@ -191,10 +191,13 @@ def create_directory_on_github(access_token, dir_path):
 
 @login_required
 def manage_directories(request, project_id):
+    
     project = get_object_or_404(Project, pk=project_id)
-
+    if request.user != project.manager:
+        return redirect('project_detail', pk=project_id)
+    
     if request.method == 'POST':
-        form = DirectoryForm(request.POST, project=project)
+        form = DirectoryManagementForm(request.POST, project=project)
         if form.is_valid():
             directory = form.save(commit=False)
             directory.project = project
@@ -211,6 +214,19 @@ def manage_directories(request, project_id):
                 # Save the directory only if the GitHub operation is successful
                 directory.save()
 
+                # Handle permission assignment
+                view_permissions = form.cleaned_data['view_permissions']
+                edit_permissions = form.cleaned_data['edit_permissions']
+
+                for user in view_permissions:
+                    directory.view_permissions.add(user)
+                for user in edit_permissions:
+                    directory.edit_permissions.add(user)
+
+                # Copy permissions to subdirectories if needed
+                if directory.parent:
+                    copy_permissions(directory.parent, directory)
+
             except ValueError as e:
                 return HttpResponse(f"Error: {e}", status=400)
             except Exception as e:
@@ -218,7 +234,7 @@ def manage_directories(request, project_id):
 
             return redirect('manage_directories', project_id=project.id)
     else:
-        form = DirectoryForm(project=project)
+        form = DirectoryManagementForm(project=project)
 
     directories = Directory.objects.filter(project=project, parent__isnull=True)
     return render(request, 'users/manage_directories.html', {
@@ -227,44 +243,99 @@ def manage_directories(request, project_id):
         'project': project,
     })
 
+def copy_permissions(parent_directory, new_directory):
+    #copy view permissions from parent directories
+    for user in parent_directory.view_permissions.all():
+        new_directory.view_permissions.add(user)
+    
+    #copy edit permissions from parent directories
+    for user in parent_directory.edit_permissions.all():
+        new_directory.edit_permissions.add(user)    
+    
+def permission_error(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    return render(request, 'users/permission_error.html', {
+        "project": project
+    })
+
+def permission_handler(directory, user, permission_type):
+    #give permissions to subdirectories
+    if permission_type == 'view':
+        directory.view_permissions.add(user)
+    elif permission_type == 'edit':
+        directory.edit_permissions.add(user)
+    
+    for subdirectory in directory.subdirectories.all():
+        if permission_type == 'view':
+            subdirectory.view_permissions.add(user)
+        elif permission_type == 'edit':
+            subdirectory.edit_permissions.add(user)
+        permission_handler(subdirectory, user, permission_type)
+
+@login_required
 def view_directory(request, directory_id):
-    directory = get_object_or_404(Directory, pk=directory_id)
+    directory = get_object_or_404(Directory, id=directory_id)
     project = directory.project
-    if directory.project.manager != request.user:
-        return HttpResponseForbidden("You do not have permission to view this directory.")
+    if request.user != project.manager:
+        return redirect('project_detail', pk=project.id)
+    if request.method == 'POST':
+        if 'add_view_permission' in request.POST:
+            view_permissions = request.POST.getlist('view_permissions')
+            for user_id in view_permissions:
+                user = get_object_or_404(User, id=user_id)
+                directory.view_permissions.add(user)
+        
+        if 'remove_view_permissions' in request.POST:
+            remove_view_permissions = request.POST.getlist('remove_view_permissions')
+            for user_id in remove_view_permissions:
+                user = get_object_or_404(User, id=user_id)
+                directory.view_permissions.remove(user)
+        
+        if 'add_edit_permission' in request.POST:
+            edit_permissions = request.POST.getlist('edit_permissions')
+            for user_id in edit_permissions:
+                user = get_object_or_404(User, id=user_id)
+                directory.edit_permissions.add(user)
+        
+        if 'remove_edit_permissions' in request.POST:
+            remove_edit_permissions = request.POST.getlist('remove_edit_permissions')
+            for user_id in remove_edit_permissions:
+                user = get_object_or_404(User, id=user_id)
+                directory.edit_permissions.remove(user)
 
-    # Handle file deletion
-    if 'delete_file' in request.POST:
-        file_id = request.POST.get('file_id')
-        if file_id:
+        if 'delete_file' in request.POST:
+            file_id = request.POST.get('file_id')
             file = get_object_or_404(File, id=file_id)
-            if file.directory == directory:
-                access_token = settings.GITHUB_TOKEN
-                repo = settings.GITHUB_REPO
-                directory_path = get_directory_path(file.directory)
-                file_path = f"{directory.project.name}/{directory_path}/{file.file.name}"
-                try:
-                    delete_file_from_github(access_token, repo, file_path)
-                except Exception as e:
-                    return HttpResponse(f"An error occurred while deleting the file from GitHub: {e}", status=500)
+            file.delete()
 
-                file.delete()
-            else:
-                return HttpResponseForbidden("You do not have permission to delete this file.")
-        return redirect('view_directory', directory_id=directory_id)
+        if 'delete_directory' in request.POST:
+            redirect_url = request.POST.get('redirect_url')
+            # Delete the directory and its subdirectories
+            directory.delete()
+            return redirect(redirect_url)
 
-    breadcrumb = []
-    current_directory = directory
-    while current_directory:
-        breadcrumb.append(current_directory)
-        current_directory = current_directory.parent
-    breadcrumb.reverse() 
+        # Redirect to avoid resubmission on refresh
+        return redirect('view_directory', directory_id=directory.id)
+
+    # Form handling for adding permissions
+    view_form = UserPermissionForm(user=request.user, permission_type='view', initial={'view_permissions': directory.view_permissions.all()})
+    edit_form = UserPermissionForm(user=request.user, permission_type='edit', initial={'edit_permissions': directory.edit_permissions.all()})
+
+    breadcrumb = get_directory_breadcrumb(directory)
 
     return render(request, 'users/view_directory.html', {
         'directory': directory,
-        'project': project,
         'breadcrumb': breadcrumb,
+        'view_form': view_form,
+        'edit_form': edit_form,
+        'project': project,
     })
+def get_directory_breadcrumb(directory):
+    breadcrumb = []
+    while directory:
+        breadcrumb.append(directory)
+        directory = directory.parent
+    return breadcrumb[::-1]
 
 
 def delete_directory_from_github(access_token, repo, dir_path):
@@ -461,17 +532,23 @@ def project_documents(request, pk):
         
 def project_code(request, pk):
     project = get_object_or_404(Project, pk=pk)
-    directories = Directory.objects.filter(project=project)
+    
+    # Get directories where the user has edit permissions
+
+    directories = Directory.objects.filter(project=project, edit_permissions=request.user)
+
+    # Get code files for the project
     code_files = File.objects.filter(project=project, file_type='code')
 
     if request.method == 'POST':
-        form = CodeFileForm(request.POST, request.FILES, project=project)
+        form = CodeFileForm(request.POST, request.FILES, project=project, user=request.user)
         if form.is_valid():
             file = form.save(commit=False)
             file.project = project
             file.directory = form.cleaned_data['directory']
             file.file_type = 'code'
             file.save()
+            
             try:
                 access_token = settings.GITHUB_TOKEN
                 if not access_token:
@@ -495,7 +572,7 @@ def project_code(request, pk):
 
             return redirect('project_code', pk=project.id)
     else:
-        form = CodeFileForm(project=project)
+        form = CodeFileForm(project=project, user=request.user)
 
     return render(request, 'users/project_code.html', {
         'project': project,
@@ -554,8 +631,11 @@ def send_invitation_email(request, email, project_id):
 def accept_invitation(request, invitation_id):
     invitation = get_object_or_404(Invitation, id=invitation_id)
     user = request.user
-    if user.is_authenticated and user.persona == "developer" and user not in invitation.project.team_members:
-        invitation.project.team_members.add(request.user)
+    
+    if user.is_authenticated and user.persona == "developer":
+        if not invitation.project.team_members.filter(id=user.id).exists():
+            invitation.project.team_members.add(user)
+        
         project_id = invitation.project.id
         invitation.delete()
         return redirect('project_detail', pk=project_id)
@@ -660,35 +740,6 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
-@require_http_methods(["POST"])
-@login_required
-def set_permission(request, pk):
-    project = get_object_or_404(Project, pk=pk)
-    if project.manager != request.user:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
-
-    data = request.POST
-    user = User.objects.get(pk=data['user_id'])
-    permission_type = data['permission_type']
-
-    Permission.objects.update_or_create(
-        user=user,
-        project=project,
-        defaults={'permission_type': permission_type},
-    )
-    return JsonResponse({'success': True})
-
-@require_http_methods(["GET"])
-@login_required
-def get_permissions(request, pk):
-    project = get_object_or_404(Project, pk=pk)
-    permissions = Permission.objects.filter(project=project)
-    permissions_data = [
-        {'user': p.user.username, 'permission_type': p.permission_type}
-        for p in permissions
-    ]
-    return JsonResponse(permissions_data, safe=False)
-
 def project_detail(request, pk):
     project = get_object_or_404(Project, pk=pk)
     user = request.user
@@ -699,7 +750,6 @@ def project_detail(request, pk):
 
 def project_settings(request, pk):
     project = get_object_or_404(Project, pk=pk)
-    permission = Permission.objects.filter(user=request.user, project=project, permission_type='edit').exists()
-    if not permission and project.manager != request.user:
+    if project.manager != request.user:
         raise PermissionDenied
     return render(request, 'users/project_settings.html', {'project': project})
