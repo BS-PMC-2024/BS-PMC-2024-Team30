@@ -166,8 +166,6 @@ def get_directory_path(directory):
     return '/'.join(reversed(path_parts))
 
 
-
-
 def upload_file_to_github(access_token, path, content, message="Initial commit"):
     url = f"https://api.github.com/repos/{settings.GITHUB_REPO}/contents/{path}"
     headers = {
@@ -277,7 +275,9 @@ def view_directory(request, directory_id):
     directory = get_object_or_404(Directory, id=directory_id)
     project = directory.project
     if request.user != project.manager:
-        return redirect('project_detail', pk=project.id)
+        #return redirect('project_detail', pk=project.id)
+         raise PermissionDenied  # Raise PermissionDenied instead of redirecting
+
     if request.method == 'POST':
         if 'add_view_permission' in request.POST:
             view_permissions = request.POST.getlist('view_permissions')
@@ -557,6 +557,8 @@ def project_code(request, pk):
                 directory_path = get_directory_path(file.directory)
                 filename = file.file.name[6:]
 
+                # with open(file.file.path, 'rb') as f:
+                #     file_content = f.read()
                 file_content = file.file.read()
                 upload_file_to_github(
                     access_token,
