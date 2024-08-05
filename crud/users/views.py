@@ -20,8 +20,9 @@ import uuid
 import logging
 from .github_service import GitHubService
 from django.conf import settings
-from .models import Project  # Make sure to import your Project model
 from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect
+from .models import Project
 
 
 #project delete add"
@@ -32,6 +33,8 @@ import base64
 
 logger = logging.getLogger(__name__)
 @login_required
+# views.py
+
 def delete_project(request, project_id):
     project = get_object_or_404(Project, id=project_id, manager=request.user)
     if request.method == 'POST':
@@ -39,7 +42,8 @@ def delete_project(request, project_id):
         project.delete()
         messages.success(request, f'Project "{project_name}" has been deleted.')
         return redirect('home')  # or wherever you want to redirect after deletion
-    return redirect('project_settings', project_id=project_id)
+    return redirect('project_settings', pk=project_id)
+
 
 def get_file_from_github(access_token, repo, file_path):
     url = f"https://api.github.com/repos/{repo}/contents/{file_path}"
@@ -140,11 +144,10 @@ def manage_directories(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
 
     if request.method == 'POST':
-        form = DirectoryForm(request.POST, project=project)  #pass project to the form
+        form = DirectoryForm(request.POST, project=project)
         if form.is_valid():
             directory = form.save(commit=False)
             directory.project = project
-            directory.save() 
 
             directory_path = get_directory_path(directory)
 
@@ -155,6 +158,9 @@ def manage_directories(request, project_id):
 
                 create_directory_on_github(access_token, f"{project.name}{project.id}/{directory_path}")
 
+                # Save the directory only if the GitHub operation is successful
+                directory.save()
+
             except ValueError as e:
                 return HttpResponse(f"Error: {e}", status=400)
             except Exception as e:
@@ -162,7 +168,7 @@ def manage_directories(request, project_id):
 
             return redirect('manage_directories', project_id=project.id)
     else:
-        form = DirectoryForm(project=project)  #pass project to the form
+        form = DirectoryForm(project=project)
 
     directories = Directory.objects.filter(project=project, parent__isnull=True)
     return render(request, 'users/manage_directories.html', {
@@ -170,7 +176,6 @@ def manage_directories(request, project_id):
         'directories': directories,
         'project': project,
     })
-    
 
 def view_directory(request, directory_id):
     directory = get_object_or_404(Directory, pk=directory_id)
