@@ -113,7 +113,7 @@ class SimpleUserTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Invalid verification code')
 
-@patch('users.views.CustomUserCreationForm')
+#@patch('users.views.CustomUserCreationForm')
 @patch('users.views.get_current_site')
 @patch('users.views.send_mail')
 def test_register_view_post_valid(self, mock_send_mail, mock_get_current_site, mock_form_class):
