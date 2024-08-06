@@ -5,8 +5,10 @@ from django.contrib.auth.decorators import login_required
 def home(request):
     if request.user.persona == 'manager':
         return redirect('manager_home')
-    else:
+    elif request.user.persona == 'developer':
         return redirect('developer_home')
+    else:
+        return redirect('users/login')
 
 @login_required
 def manager_home(request):
