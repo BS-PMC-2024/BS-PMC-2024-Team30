@@ -282,37 +282,67 @@ def view_directory(request, directory_id):
         if 'add_view_permission' in request.POST:
             view_permissions = request.POST.getlist('view_permissions')
             for user_id in view_permissions:
-                user = get_object_or_404(User, id=user_id)
-                directory.view_permissions.add(user)
+                if user_id.isdigit():
+                    user = get_object_or_404(User, id=int(user_id))
+                    directory.view_permissions.add(user)
         
         if 'remove_view_permissions' in request.POST:
             remove_view_permissions = request.POST.getlist('remove_view_permissions')
             for user_id in remove_view_permissions:
-                user = get_object_or_404(User, id=user_id)
-                directory.view_permissions.remove(user)
+                if user_id.isdigit():
+                    user = get_object_or_404(User, id=int(user_id))
+                    directory.view_permissions.remove(user)
         
         if 'add_edit_permission' in request.POST:
             edit_permissions = request.POST.getlist('edit_permissions')
             for user_id in edit_permissions:
-                user = get_object_or_404(User, id=user_id)
-                directory.edit_permissions.add(user)
+                if user_id.isdigit():
+                    user = get_object_or_404(User, id=int(user_id))
+                    directory.edit_permissions.add(user)
         
         if 'remove_edit_permissions' in request.POST:
             remove_edit_permissions = request.POST.getlist('remove_edit_permissions')
             for user_id in remove_edit_permissions:
-                user = get_object_or_404(User, id=user_id)
-                directory.edit_permissions.remove(user)
+                if user_id.isdigit():
+                    user = get_object_or_404(User, id=int(user_id))
+                    directory.edit_permissions.remove(user)
 
         if 'delete_file' in request.POST:
             file_id = request.POST.get('file_id')
-            file = get_object_or_404(File, id=file_id)
-            file.delete()
+            if file_id.isdigit():
+                file = get_object_or_404(File, id=int(file_id))
+                repo = settings.GITHUB_REPO
+                access_token = settings.GITHUB_TOKEN
+                directory_path = get_directory_path(file.directory)
+                file_path = f"{directory.project.name}{directory.project.id}/{directory_path}/{file.file.name}"
+                try:
+                    delete_file_from_github(access_token, repo, file_path)
+                except Exception as e:
+                    return HttpResponse(f"An error occurred while deleting the file from GitHub: {e}", status=500)
+                file.delete()
 
         if 'delete_directory' in request.POST:
-            redirect_url = request.POST.get('redirect_url')
-            # Delete the directory and its subdirectories
-            directory.delete()
-            return redirect(redirect_url)
+            print("2")
+            if request.user == directory.project.manager or request.user in directory.edit_permissions.all():
+                access_token = settings.GITHUB_TOKEN
+                repo = settings.GITHUB_REPO
+                try:
+                    # Delete subdirectories and files
+                    for subdirectory in directory.subdirectories.all():
+                        delete_directory_from_github(access_token, repo, f"{directory.project.name}{directory.project.id}/{get_directory_path(subdirectory)}")
+                        subdirectory.delete()
+                    for file in directory.files.all():
+                        file_path = f"{directory.project.name}{directory.project.id}/{get_directory_path(directory)}/{file.file.name}"
+                        delete_file_from_github(access_token, repo, file_path)
+                        file.delete()
+                    # Finally delete the directory itself
+                    delete_directory_from_github(access_token, repo, f"{directory.project.name}{directory.project.id}/{get_directory_path(directory)}")
+                    directory.delete()
+                except Exception as e:
+                    return HttpResponse(f"An error occurred: {e}", status=500)
+                return redirect('manage_directories', project_id=directory.project.id)
+            else:
+                return HttpResponse("You do not have permission to delete this directory.", status=403)
 
         # Redirect to avoid resubmission on refresh
         return redirect('view_directory', directory_id=directory.id)
@@ -330,6 +360,7 @@ def view_directory(request, directory_id):
         'edit_form': edit_form,
         'project': project,
     })
+
 def get_directory_breadcrumb(directory):
     breadcrumb = []
     while directory:
@@ -428,7 +459,7 @@ def delete_directory(request, directory_id):
     repo = settings.GITHUB_REPO
 
     try:
-        delete_directory_from_github(access_token, repo, f"{directory.project.name}/{get_directory_path(directory)}")
+        delete_directory_from_github(access_token, repo, f"{directory.project.name}{directory.project.id}/{get_directory_path(directory)}")
         
         delete_directory_from_database(directory)
         
@@ -530,17 +561,56 @@ def project_documents(request, pk):
     })
 
         
+def delete_file(request, file_id):
+    if request.method == 'POST':
+        file = get_object_or_404(File, id=file_id)
+        directory = file.directory  # Ensure the file has a directory attribute
+        
+        # Check if the user is the project manager or has edit permissions for the directory
+        if request.user == file.project.manager or request.user in directory.edit_permissions.all():
+            file.delete()
+            # Optionally, you might want to also delete from GitHub
+            # e.g., delete_file_from_github(file)
+
+            return redirect('project_code', pk=file.project.pk)
+        else:
+            return HttpResponse("You do not have permission to delete this file.", status=403)
+
+    return HttpResponse("Invalid request method.", status=405)
+
 def project_code(request, pk):
     project = get_object_or_404(Project, pk=pk)
     
-    # Get directories where the user has edit permissions
-
-    directories = Directory.objects.filter(project=project, edit_permissions=request.user)
-
-    # Get code files for the project
-    code_files = File.objects.filter(project=project, file_type='code')
-
+    if request.user != project.manager:
+        directories_with_view_permissions = Directory.objects.filter(
+            project=project,
+            view_permissions=request.user
+        )
+        code_files = File.objects.filter(
+            project=project,
+            file_type='code',
+            directory__in=directories_with_view_permissions
+        )
+    else:
+        directories_with_view_permissions = Directory.objects.filter(
+            project=project,
+        )
+        code_files = File.objects.filter(
+            project=project,
+            file_type='code',
+        )
+        
     if request.method == 'POST':
+        if 'delete_file' in request.POST:
+            file_id = request.POST.get('file_id')
+            if file_id.isdigit():
+                file = get_object_or_404(File, id=int(file_id))
+                if request.user == file.project.manager or request.user in file.directory.edit_permissions.all():
+                    file.delete()
+                    return redirect('project_code', pk=project.id)
+                else:
+                    return HttpResponse("You do not have permission to delete this file.", status=403)
+
         form = CodeFileForm(request.POST, request.FILES, project=project, user=request.user)
         if form.is_valid():
             file = form.save(commit=False)
@@ -580,7 +650,7 @@ def project_code(request, pk):
         'project': project,
         'form': form,
         'code_files': code_files,
-        'directories': directories,
+        'directories': directories_with_view_permissions,
     })
     
 @login_required

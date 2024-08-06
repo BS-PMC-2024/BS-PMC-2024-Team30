@@ -23,4 +23,5 @@ urlpatterns = [
     path('accept_invitation/<int:invitation_id>/', views.accept_invitation, name='accept_invitation'),
     path('download/<int:pk>/<int:file_id>/', views.download_file, name='download_file'),
     path('users/permission-error/<int:pk>/', views.permission_error, name='permission_error'),
+    path('file/delete/<int:file_id>/', views.delete_file, name='delete_file'),
 ]
