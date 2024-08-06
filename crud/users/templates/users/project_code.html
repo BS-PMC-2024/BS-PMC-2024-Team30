@@ -18,6 +18,10 @@
         {% for file in code_files %}
         <li>
             <a href="{% url 'view_file' pk=project.id file_id=file.id %}">{{ file.file.name }}</a>
+            <form method="post" action="{% url 'delete_file' file_id=file.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
         </li>
         {% empty %}
             <li>No code files found.</li>
