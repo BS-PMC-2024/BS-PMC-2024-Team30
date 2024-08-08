@@ -9,8 +9,10 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <style>
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f8f9fa;
+            background-image: url('https://i.pinimg.com/originals/1e/64/42/1e6442909c8572ef9fca5ce74ca8541d.jpg'); /* נתיב לתמונה */
+            background-size: cover; 
+            background-repeat: no-repeat;
+            background-position: center; 
         }
         header {
             background-color: #343a40;
@@ -33,57 +35,52 @@
         header nav ul li a:hover {
             text-decoration: underline;
         }
+        header nav ul li.active a {
+            color: #007bff; /* צבע כחול עבור הכפתור הפעיל */
+            font-weight: bold;
+            text-decoration: underline;
+        }
         main {
             padding: 20px;
         }
         .container {
             max-width: 1200px;
             margin: auto;
-            background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: none;
         }
-
-        .navbar {
-            background-color: #f8f9fa;
-            padding: 10px;
-        }
-        
-        .navbar-brand {
-            font-size: 1.25rem;
+        /* סגנון לכותרות */
+        h1, h2, h3, h4, h5, h6 {
             font-weight: bold;
         }
-        
-        .navbar-nav .nav-item {
-            margin-right: 15px;
+        h1 {
+            color: #007bff; /* כחול */
         }
-        
-        .nav-link {
-            color: #007bff;
+        h2 {
+            color: #28a745; /* ירוק */
         }
-        
-        .nav-link:hover {
-            color: #0056b3;
-            text-decoration: underline;
-        }
-        .navbar-nav .nav-item.active .nav-link {
-            font-weight: bold;
-            color: #007bff;
-        }
-
+        /* הוסף סגנונות נוספים לכותרות אחרות אם צריך */
     </style>
 </head>
 <body>
     <header>
         <nav>
             <ul>
-                <li><a href="{% url 'home' %}">Home</a></li>
+                <li class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                    <a href="{% url 'home' %}">Home</a>
+                </li>
                 {% if user.is_authenticated %}
-                    <li><a href="{% url 'logout' %}">Logout</a></li>
+                    <li class="{% if request.resolver_match.url_name == 'logout' %}active{% endif %}">
+                        <a href="{% url 'logout' %}">Logout</a>
+                    </li>
                 {% else %}
-                    <li><a href="{% url 'login' %}">Login</a></li>
-                    <li><a href="{% url 'register' %}">Register</a></li>
+                    <li class="{% if request.resolver_match.url_name == 'login' %}active{% endif %}">
+                        <a href="{% url 'login' %}">Login</a>
+                    </li>
+                    <li class="{% if request.resolver_match.url_name == 'register' %}active{% endif %}">
+                        <a href="{% url 'register' %}">Register</a>
+                    </li>
                 {% endif %}
             </ul>
         </nav>
