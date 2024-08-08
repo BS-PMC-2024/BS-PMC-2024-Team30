@@ -9,20 +9,29 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <style>
         body {
-            background-image: url('https://i.pinimg.com/originals/1e/64/42/1e6442909c8572ef9fca5ce74ca8541d.jpg'); /* נתיב לתמונה */
+            background-image: url('https://i.pinimg.com/originals/1e/64/42/1e6442909c8572ef9fca5ce74ca8541d.jpg'); /* Background image */
             background-size: cover; 
             background-repeat: no-repeat;
             background-position: center; 
         }
         header {
-            background-color: #343a40;
+            background-color: #2d343a;
             padding: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            margin-left: 20px; /* Adjust spacing as needed */
+        }
+        .logo img {
+            height: 30px; /* Adjust logo size */
         }
         header nav ul {
             list-style: none;
             padding: 0;
             display: flex;
-            justify-content: center;
+            margin: 0;
         }
         header nav ul li {
             margin: 0 15px;
@@ -36,7 +45,7 @@
             text-decoration: underline;
         }
         header nav ul li.active a {
-            color: #007bff; /* צבע כחול עבור הכפתור הפעיל */
+            color: #007bff; /* Blue color for the active link */
             font-weight: bold;
             text-decoration: underline;
         }
@@ -50,21 +59,24 @@
             border-radius: 8px;
             box-shadow: none;
         }
-        /* סגנון לכותרות */
+        /* Styles for headings */
         h1, h2, h3, h4, h5, h6 {
             font-weight: bold;
         }
         h1 {
-            color: #007bff; /* כחול */
+            color: #007bff; /* Blue */
         }
         h2 {
-            color: #28a745; /* ירוק */
+            color: #28a745; /* Green */
         }
-        /* הוסף סגנונות נוספים לכותרות אחרות אם צריך */
+        /* Additional styles for other headings if needed */
     </style>
 </head>
 <body>
     <header>
+        <div class="logo">
+            <a href="{% url 'home' %}"><img src="{% static 'images/NOSS.png' %}" alt="Logo"></a> <!-- Update with your logo path -->
+        </div>
         <nav>
             <ul>
                 <li class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">
@@ -93,4 +105,3 @@
     </main>
 </body>
 </html>
-##
