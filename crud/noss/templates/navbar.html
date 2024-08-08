@@ -1,21 +1,40 @@
+<style>
+.navbar-nav .nav-item .nav-link {
+    color: #000; /* Default link color */
+    font-weight: normal; /* Default font weight (not bold) */
+}
+
+.navbar-nav .nav-item .nav-link.active {
+    font-weight: bold; /* Bold only for the active link */
+    color: #007bff; /* Color for the active link */
+}
+
+.navbar-nav .nav-item .nav-link.inactive {
+    color: #000; /* Default color for inactive links */
+}
+
+</style>
 <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
-    <a class="navbar-brand" href="{% url 'project_detail' pk=project.pk %}">Project Menu</a>
     <div class="collapse navbar-collapse">
         <ul class="navbar-nav">
+            <li class="nav-item {% if request.resolver_match.view_name == 'project_detail' %}active{% endif %}">
+                <a class="nav-link {% if request.resolver_match.view_name == 'project_detail' %}active{% endif %}" href="{% url 'project_detail' pk=project.pk %}">Project details</a>
+            </li>
             {% if project.manager == request.user %}
             <li class="nav-item {% if request.resolver_match.view_name == 'project_settings' %}active{% endif %}">
-                <a class="nav-link" href="{% url 'project_settings' pk=project.pk %}">Project Settings</a>
+                <a class="nav-link {% if request.resolver_match.view_name == 'project_settings' %}active{% endif %}" href="{% url 'project_settings' pk=project.pk %}">Project Settings</a>
             </li>
             <li class="nav-item {% if request.resolver_match.view_name == 'manage_directories' %}active{% endif %}">
-                <a class="nav-link" href="{% url 'manage_directories' project_id=project.pk %}">Manage Directories</a>
+                <a class="nav-link {% if request.resolver_match.view_name == 'manage_directories' %}active{% endif %}" href="{% url 'manage_directories' project_id=project.pk %}">Manage Directories</a>
             </li>
             {% endif %}
             <li class="nav-item {% if request.resolver_match.view_name == 'project_documents' %}active{% endif %}">
-                <a class="nav-link" href="{% url 'project_documents' pk=project.pk %}">Project Documents</a>
+                <a class="nav-link {% if request.resolver_match.view_name == 'project_documents' %}active{% endif %}" href="{% url 'project_documents' pk=project.pk %}">Project Documents</a>
             </li>
             <li class="nav-item {% if request.resolver_match.view_name == 'project_code' %}active{% endif %}">
-                <a class="nav-link" href="{% url 'project_code' pk=project.pk %}">Project Code</a>
+                <a class="nav-link {% if request.resolver_match.view_name == 'project_code' %}active{% endif %}" href="{% url 'project_code' pk=project.pk %}">Project Code</a>
             </li>
         </ul>
     </div>
 </nav>
+
