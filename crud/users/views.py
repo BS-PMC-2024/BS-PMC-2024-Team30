@@ -815,9 +815,18 @@ def logout_view(request):
 def project_detail(request, pk):
     project = get_object_or_404(Project, pk=pk)
     user = request.user
-    
+
     if user != project.manager and not project.team_members.filter(id=user.id).exists():
         raise PermissionDenied
+
+    if request.method == 'POST':
+        if user == project.manager:
+            new_description = request.POST.get('description', '')
+            project.description = new_description
+            project.save()
+            messages.success(request, "Project description updated successfully.")
+            return redirect('project_detail', pk=pk)
+
     return render(request, 'users/project_detail.html', {'project': project})
 
 def project_settings(request, pk):

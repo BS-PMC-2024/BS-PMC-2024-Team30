@@ -5,12 +5,14 @@
 {% block content %}
     <h1>{{ project.name }} - Code Files</h1>
     {% include 'navbar.html' %}
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <h2>Upload Code File</h2>
     <form method="post" enctype="multipart/form-data" action="{% url 'project_code' pk=project.id %}">
         {% csrf_token %}
         {{ form.as_p }}
-        <button type="submit" class="btn btn-secondary">Upload Code File</button>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-upload"></i> Upload
+        </button>
     </form>
 
     <h2>Existing Code Files</h2>

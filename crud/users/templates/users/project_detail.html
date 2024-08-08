@@ -12,8 +12,19 @@
                 <h1>{{ project.name }}</h1>
                 <p><strong>Created on:</strong> {{ project.created_at|date:"F d, Y H:i" }}</p>
                 <p><strong>Managed by:</strong> {{ project.manager.username }}</p>
+
                 <h2>Description</h2>
+                {% if user == project.manager %}
+                <form method="post" action="{% url 'project_detail' pk=project.pk %}">
+                    {% csrf_token %}
+                    <textarea name="description" rows="4" cols="50" class="form-control">{{ project.description|default:"No description available." }}</textarea>
+                    <br>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+                {% else %}
                 <p>{{ project.description|default:"No description available." }}</p>
+                {% endif %}
+
                 <h3>Team Members</h3>
                 <ul class="list-group">
                     {% for member in project.team_members.all %}
