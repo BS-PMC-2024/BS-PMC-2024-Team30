@@ -15,24 +15,37 @@ class LoginForm(forms.Form):
 class VerificationForm(forms.Form):
     code = forms.CharField(max_length=36)  # Adjust the max_length if needed
     
+from django import forms
+from .models import Project
+#פה היה שינוי
 class ProjectForm(forms.ModelForm):
     team_member_emails = forms.CharField(
-        widget=forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Enter email addresses separated by commas'}),
-        help_text="Enter email addresses separated by commas"
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'style': 'width: 100%; max-width: 300px;',
+            'placeholder': 'Enter email'
+        }),
     )
     description = forms.CharField(
-        widget=forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Enter project description'}),
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter project description'
+        }),
         required=False,
         help_text="Optional. Enter a brief description of the project."
     )
-
+#פה היה שינוי
     class Meta:
         model = Project
         fields = ['name', 'description', 'team_member_emails']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Project name'}),
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'style': 'width: 100%; max-width: 300px;',
+                'placeholder': 'Enter Project name'
+            }),
         }
-        
+
 class CodeFileForm(forms.ModelForm):
     class Meta:
         model = File

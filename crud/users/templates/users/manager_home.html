@@ -1,9 +1,52 @@
+
 <!-- users/templates/users/manager_home.html -->
 {% extends 'layout.html' %}
 
 {% block title %}Manager Home{% endblock %}
 
 {% block content %}
+<style>
+    .container {
+        margin-top: 20px;
+    }
+    .card {
+        margin-bottom: 20px;
+    }
+    .card-header h2 {
+        font-size: 1.5rem;
+    }
+    .form-group label {
+        font-weight: bold;
+    }
+    .form-control {
+        max-width: 300px;
+    }
+    .form-text {
+        font-size: 0.9rem;
+    }
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+        transition: background-color 0.3s, border-color 0.3s;
+    }
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #004085;
+    }
+    .shared-email {
+        display: inline-block;
+        margin: 5px;
+        padding: 5px 10px;
+        background-color: #f1f1f1;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .shared-email:hover {
+        background-color: #e1e1e1;
+    }
+</style>
+
 <div class="container">
     <div class="row">
         <div class="col-md-12">
@@ -29,6 +72,11 @@
                             <label for="{{ form.team_member_emails.id_for_label }}">Team Member Emails</label>
                             {{ form.team_member_emails }}
                             <small class="form-text text-muted">{{ form.team_member_emails.help_text }}</small>
+                            <div>
+                                {% for user in shared_project_users %}
+                                    <span class="shared-email" onclick="addEmail('{{ user.email }}')">{{ user.email }}</span>
+                                {% endfor %}
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary">Create Project</button>
                     </form>
@@ -66,4 +114,17 @@
         </div>
     </div>
 </div>
+
+<script>
+    function addEmail(email) {
+        var emailField = document.getElementById('{{ form.team_member_emails.id_for_label }}');
+        if (emailField.value) {
+            emailField.value += ', ' + email;
+        } else {
+            emailField.value = email;
+        }
+    }
+</script>
+
 {% endblock %}
+

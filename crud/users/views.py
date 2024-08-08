@@ -676,15 +676,23 @@ def manager_home(request):
             emails = form.cleaned_data['team_member_emails'].split(',')
             for email in emails:
                 email = email.strip()
-                send_invitation_email(request, email,project.id)
+                send_invitation_email(request, email, project.id)
             return redirect('manager_home')
     else:
         form = ProjectForm()
 
     projects = Project.objects.filter(manager=request.user)
+    
+    # מציאת משתמשים שמקושרים לפרויקטים שהמנהל מנהל
+    shared_project_users = User.objects.filter(
+        projects__manager=request.user
+    ).distinct()
 
-    return render(request, 'users/manager_home.html', {'form': form, 'projects': projects})
-
+    return render(request, 'users/manager_home.html', {
+        'form': form,
+        'projects': projects,
+        'shared_project_users': shared_project_users
+    })
 
 @login_required
 def send_invitation_email(request, email, project_id):
