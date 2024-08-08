@@ -834,6 +834,8 @@ def project_detail(request, pk):
             project.save()
             messages.success(request, "Project description updated successfully.")
             return redirect('project_detail', pk=pk)
+        else:
+            return HttpResponseForbidden("You do not have permission to edit this project.")
 
     return render(request, 'users/project_detail.html', {'project': project})
 

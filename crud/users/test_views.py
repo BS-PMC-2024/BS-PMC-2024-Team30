@@ -1,6 +1,6 @@
 import base64
 import time
-
+from django.contrib import messages
 import shutil
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -131,6 +131,14 @@ class ManagerHomeTestCase(TestCase):
         self.assertIsInstance(response.context['form'], ProjectForm)
         self.assertTrue(response.context['form'].errors)
 
+    def test_invite_recommendations(self):
+        url = reverse('manager_home')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'users/manager_home.html')
+        self.assertIsInstance(response.context['form'], ProjectForm)
+        self.assertQuerysetEqual(response.context['projects'], Project.objects.filter(manager=self.manager))
+        self.assertQuerysetEqual(response.context['shared_project_users'], User.objects.filter(projects__manager=self.manager).distinct())
 
 
 User = get_user_model()
@@ -238,6 +246,29 @@ class ProjectDetailViewTests(TestCase):
         request.user = self.non_member
         with self.assertRaises(PermissionDenied):
             project_detail(request, self.project.pk)
+             
+    def test_update_description_by_manager(self):
+        self.client.login(username='manageruser', password='password123')
+        url = reverse('project_detail', kwargs={'pk': self.project.pk})
+
+        response = self.client.post(url, {'description': 'Updated Description'})
+
+        self.assertEqual(response.status_code, 302)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.description, 'Updated Description')
+        self.assertTrue(messages.get_messages(response.wsgi_request))
+
+    def test_update_description_by_non_manager(self):
+        self.client.login(username='teamuser', password='password123')
+        url = reverse('project_detail', kwargs={'pk': self.project.pk})
+
+        response = self.client.post(url, {'description': 'Should Not Update'})
+        
+        self.assertEqual(response.status_code, 403)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.description, 'A test project')
+        self.assertFalse(messages.get_messages(response.wsgi_request))
+
 
 User = get_user_model()
 
@@ -977,6 +1008,51 @@ class AcceptInvitationTests(TestCase):
         self.assertFalse(self.project.team_members.filter(id=self.developer.id).exists())
         self.assertTrue(Invitation.objects.filter(id=self.invitation.id).exists())
 
+class ProjectDetailTestCase(TestCase):
+    def setUp(self):
+        self.manager = User.objects.create_user(email="mail1@gmail.com",username='manager', password='managerpassword', persona='manager')
+        self.team_member = User.objects.create_user(email="mail2@gmail.com",username='team_member', password='teammemberpassword', persona='team_member')
+        self.project = Project.objects.create(name='Test Project', description='Initial Description', manager=self.manager)
+        self.project.team_members.add(self.team_member)
+        self.client = Client()
+       
+    
+    def test_update_description_by_manager(self):
+        self.client.login(username='manager', password='managerpassword')
+        url = reverse('project_detail', kwargs={'pk': self.project.pk})
+
+        # Submit a POST request to update description
+        response = self.client.post(url, {'description': 'Updated Description'})
+        
+        # Check for a successful redirect
+        self.assertEqual(response.status_code, 302)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.description, 'Updated Description')
+        self.assertTrue(messages.get_messages(response.wsgi_request))
+
+    def test_update_description_by_non_manager(self):
+        self.client.login(username='team_member', password='teammemberpassword')
+        url = reverse('project_detail', kwargs={'pk': self.project.pk})
+
+        # Try to submit a POST request as a team member
+        response = self.client.post(url, {'description': 'Should Not Update'})
+        
+        # Check for a forbidden status code (403) if a non-manager is trying to update the description
+        self.assertEqual(response.status_code, 403)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.description, 'Initial Description')
+        self.assertFalse(messages.get_messages(response.wsgi_request))
+    
+    def test_view_project_detail(self):
+        self.client.login(username='manager', password='managerpassword')
+        url = reverse('project_detail', kwargs={'pk': self.project.pk})
+
+        response = self.client.get(url)
+        
+        self.assertContains(response, 'Initial Description')
+        self.assertContains(response, 'Test Project')
+        self.assertContains(response, 'Created on:')
+        self.assertContains(response, 'Managed by:')
 
 # from django.test import TestCase, Client
 # from django.urls import reverse
