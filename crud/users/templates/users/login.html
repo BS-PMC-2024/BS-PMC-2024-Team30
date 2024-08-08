@@ -1,69 +1,81 @@
+
 {% extends 'layout.html' %}
 
 {% block title %}User Login{% endblock %}
 
 {% block content %}
     <style>
-
         body {
             background-image: url('https://i.pinimg.com/originals/1e/64/42/1e6442909c8572ef9fca5ce74ca8541d.jpg'); /* נתיב לתמונה */
             background-size: cover; 
             background-repeat: no-repeat;
             background-position: center; 
         }
-       
         .container {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100%;
-            margin: 0;
+            min-height: 100vh;
+            background-repeat: no-repeat;
+            background-position: right;
+            background-size: contain;
         }
-
         .login-form {
             background: white;
             padding: 40px;
-            border-radius: 10px;
+            border-radius: 15px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
+            max-width: 500px;
             width: 100%;
         }
-
         .login-form h2 {
             margin-bottom: 30px;
             text-align: center;
             font-family: 'Arial', sans-serif;
             color: #333;
+            font-weight: bold;
         }
-
         .form-group {
             margin-bottom: 20px;
         }
-
         .form-control {
-            border-radius: 5px;
+            border-radius: 10px;
         }
-
         .btn-primary {
             width: 100%;
             padding: 12px;
-            border-radius: 5px;
+            border-radius: 10px;
             background-color: #007bff;
             border-color: #007bff;
         }
-
         .btn-primary:hover {
             background-color: #0056b3;
             border-color: #0056b3;
         }
-
         .errorlist {
             color: red;
             margin-bottom: 10px;
         }
-
         .alert {
             margin-top: 20px;
+        }
+        .login-form a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .login-form a:hover {
+            color: #0056b3;
+        }
+        .signup-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .signup-link a {
+            color: #007bff;
+            font-weight: bold;
+        }
+        .signup-link a:hover {
+            color: #0056b3;
         }
     </style>
     <div class="container">
@@ -82,6 +94,11 @@
                         {% endif %}
                     </div>
                 {% endfor %}
+                <div class="form-group">
+                    <label for="remember_me">
+                        <input type="checkbox" id="remember_me" name="remember_me"> Remember Me
+                    </label>
+                </div>
                 <button type="submit" class="btn btn-primary">Login</button>
             </form>
             {% if error %}
@@ -89,6 +106,9 @@
                     {{ error }}
                 </div>
             {% endif %}
+            <div class="signup-link">
+                Don't have an account yet? <a href="{% url 'register' %}">Sign up</a>
+            </div>
         </div>
     </div>
 {% endblock %}
