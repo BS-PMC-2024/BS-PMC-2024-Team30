@@ -1000,3 +1000,84 @@ def project_tasks(request, project_id):
         'project': project,
         'tasks': tasks,
     })
+
+
+import openai
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.contrib import messages
+import openai
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.contrib import messages
+from .models import Project
+import openai
+import logging
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.contrib import messages
+from .models import Project
+import openai
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.contrib import messages
+from .models import Project
+import openai
+import logging
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.contrib import messages
+from .models import Project
+
+# יצירת לוגים
+logger = logging.getLogger(__name__)
+
+@login_required
+def ai_code_improvement(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+    suggestions = None
+
+    if request.method == 'POST':
+        code = request.POST.get('code')
+        logger.debug(f"Code submitted: {code}")
+        if code:
+            try:
+                openai.api_key = settings.OPENAI_API_KEY
+
+                # שליחת הבקשה ל-ChatGPT
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": f"Please review and improve the following code:\n{code}"}
+                    ]
+                )
+
+                # הדפסת התגובה ל-console
+                logger.debug(f"Response from OpenAI: {response}")
+
+                # בדיקת תוכן התגובה
+                if response and response['choices']:
+                    suggestions = response['choices'][0]['message']['content']
+                    logger.debug(f"Suggestions: {suggestions}")
+                else:
+                    messages.error(request, "No suggestions were returned by the AI.")
+            except Exception as e:
+                messages.error(request, f"An error occurred: {e}")
+                logger.error(f"Error communicating with OpenAI: {e}")
+        else:
+            messages.error(request, "Please enter some code.")
+            logger.debug("No code was entered.")
+    
+    logger.debug(f"Suggestions to be shown: {suggestions}")
+
+    return render(request, 'users/ai_code_improvement.html', {
+        'project': project,
+        'suggestions': suggestions
+    })
+

@@ -1,0 +1,25 @@
+{% extends 'layout.html' %}
+
+{% block title %}AI Code Improvement for {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>AI Code Improvement for {{ project.name }}</h2>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="code">Enter your code:</label>
+            <textarea class="form-control" id="code" name="code" rows="10">{{ request.POST.code }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Get Suggestions</button>
+    </form>
+
+    {% if suggestions %}
+        <h3>Suggested Improvements:</h3>
+        <div class="alert alert-info mt-4">
+            <pre>{{ suggestions }}</pre>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
