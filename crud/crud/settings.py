@@ -133,6 +133,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'apikey'  # This is literal, do not change it to your SendGrid username
 EMAIL_HOST_PASSWORD = os.getenv('SENDGRID_API_KEY')
+EMAIL_USER = os.getenv('EMAIL_USER')
 
 # GitHub Integration
 GITHUB_API_KEY = os.getenv('GITHUB_API_KEY')

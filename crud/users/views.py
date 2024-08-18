@@ -60,7 +60,13 @@ from django.core.mail import send_mail
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from .models import Task
-
+import openai
+import logging
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.contrib import messages
+from .models import Project
 #project delete add"
 import requests
 import base64
@@ -742,7 +748,7 @@ def send_invitation_email(request, email, project_id):
     accept_url = request.build_absolute_uri(reverse('accept_invitation', args=[invitation.id]))
     email_subject = f"Invitation to join project {project.name}"
     email_body = f"Hi,\n\nYou have been invited to join the project '{project.name}'.\n\nPlease click the link below to accept the invitation:\n{accept_url}\n\nBest regards,\nProject Management Team"
-    send_mail(email_subject, email_body, 'shohamdimri@gmail.com', [invitation.email])
+    send_mail(email_subject, email_body, settings.EMAIL_USER, [invitation.email])
 
 def accept_invitation(request, invitation_id):
     invitation = get_object_or_404(Invitation, id=invitation_id)
@@ -776,7 +782,7 @@ def register(request):
                 'domain': current_site.domain,
                 'token': str(user.verification_code),  # Convert to string
             })
-            send_mail(mail_subject, message, 'shohamdimri@gmail.com', [user.email])
+            send_mail(mail_subject, message, settings.EMAIL_USER, [user.email])
             return redirect('email_verification')
     else:
         form = CustomUserCreationForm()
@@ -821,7 +827,7 @@ def login_view(request):
                 # Send the verification code to the user’s email
                 mail_subject = 'Your login verification code'
                 message = f'Your verification code is {user.verification_code}'
-                send_mail(mail_subject, message, 'shohamdimri@gmail.com', [user.email])
+                send_mail(mail_subject, message, settings.EMAIL_USER, [user.email])
 
                 request.session['user_id'] = user.id  # Store user ID in session
                 return redirect('verify_code')  # Redirect to code verification page
@@ -953,7 +959,7 @@ def developer_tasks(request):
         send_mail(
             'Task Completed',
             f'The task "{task.title}" has been marked as done by {request.user.username}.',
-            'shohamdimri@gmail.com',  # וודאי שהכתובת מאומתת ב-SendGrid
+            settings.EMAIL_USER,
             [task.created_by.email],
             fail_silently=False,
         )
@@ -979,7 +985,7 @@ def mark_task_done(request, task_id):
         send_mail(
             'Task Completed',
             f'The task "{task.title}" has been marked as done by {request.user.username}.',
-            'shohamdimri@gmail.com',
+            settings.EMAIL_USER,
             [task.created_by.email]
         )
 
@@ -1000,39 +1006,6 @@ def project_tasks(request, project_id):
         'project': project,
         'tasks': tasks,
     })
-
-
-import openai
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.conf import settings
-from django.contrib import messages
-import openai
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.conf import settings
-from django.contrib import messages
-from .models import Project
-import openai
-import logging
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.conf import settings
-from django.contrib import messages
-from .models import Project
-import openai
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.conf import settings
-from django.contrib import messages
-from .models import Project
-import openai
-import logging
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.conf import settings
-from django.contrib import messages
-from .models import Project
 
 # יצירת לוגים
 logger = logging.getLogger(__name__)
