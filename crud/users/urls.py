@@ -31,5 +31,7 @@ urlpatterns = [
     path('projects/<int:project_id>/create-task/', create_task, name='create_task'),  # יצירת משימה לפרויקט ספציפי
     path('tasks/<int:task_id>/done/', views.mark_task_done, name='mark_task_done'),
     path('my-tasks/', views.developer_tasks, name='developer_tasks'),
+    path('projects/<int:project_id>/tasks/', views.project_tasks, name='project_tasks'),
+
 
 ]
