@@ -70,7 +70,9 @@
                         </div>
                         <div class="form-group">
                             <label for="{{ form.team_member_emails.id_for_label }}">Team Member Emails</label>
+                            {{ form.team_member_emails.label_tag }}
                             {{ form.team_member_emails }}
+                            {{ form.team_member_emails.errors }}
                             <small class="form-text text-muted">{{ form.team_member_emails.help_text }}</small>
                             <div>
                                 {% for user in shared_project_users %}

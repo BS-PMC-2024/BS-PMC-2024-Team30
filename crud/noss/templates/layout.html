@@ -73,6 +73,7 @@
     </style>
 </head>
 <body>
+
     <header>
         <div class="logo">
             <a href="{% url 'home' %}"><img src="{% static 'images/NOSS.png' %}" alt="Logo"></a> <!-- Update with your logo path -->
@@ -95,6 +96,15 @@
         </nav>
     </header>
     <main>
+        {% if messages %}
+        <div class="alert-messages">
+            {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
         <div class="container">
             {% block content %}
             {% endblock %}

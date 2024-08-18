@@ -19,7 +19,7 @@ from django import forms
 from .models import Project
 #פה היה שינוי
 class ProjectForm(forms.ModelForm):
-    team_member_emails = forms.CharField(
+    team_member_emails = forms.EmailField(
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'style': 'width: 100%; max-width: 300px;',
@@ -45,6 +45,16 @@ class ProjectForm(forms.ModelForm):
                 'placeholder': 'Enter Project name'
             }),
         }
+
+class InviteMemberForm(forms.Form):
+    email = forms.EmailField(
+        label="Team Member Email",
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': "Enter team member's email"
+        }),
+        required=True
+    )
 
 class CodeFileForm(forms.ModelForm):
     class Meta:
