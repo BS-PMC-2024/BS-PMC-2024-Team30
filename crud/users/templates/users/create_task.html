@@ -6,13 +6,6 @@
 <div class="container">
     <h1>Create a New Task for {{ project.name }}</h1>
     
-    {% if messages %}
-        <div class="alert alert-success" role="alert">
-            {% for message in messages %}
-                {{ message }}
-            {% endfor %}
-        </div>
-    {% endif %}
     
     <form method="post">
         {% csrf_token %}

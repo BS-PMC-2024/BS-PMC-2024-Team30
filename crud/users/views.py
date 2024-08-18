@@ -1,75 +1,37 @@
-from asyncio import Task
+import os
+import uuid
+import logging
+import requests
+import base64
+import openai
+
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
 from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST, require_http_methods
 from django.core.mail import send_mail
-from .models import User, Project, File, Directory, Invitation
 from django.template.loader import render_to_string
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
-from django.http import HttpResponseForbidden, Http404, HttpResponseRedirect
-from .forms import CustomUserCreationForm, LoginForm, TaskForm, VerificationForm, InvitationForm
-from .forms import ProjectForm, UserPermissionForm
-from django.http import HttpResponseForbidden, HttpResponse
-from .forms import CustomUserCreationForm, LoginForm, VerificationForm, EditFileForm
-from .forms import ProjectForm, DocumentFileForm, CodeFileForm, DirectoryManagementForm
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
+from django.http import (
+    HttpResponseForbidden, Http404, HttpResponseRedirect, 
+    HttpResponse, JsonResponse
+)
 from django.core.exceptions import PermissionDenied
-import uuid
-import logging
-from .github_service import GitHubService
 from django.conf import settings
 from django.contrib import messages
-from django.shortcuts import get_object_or_404, redirect
-from .models import Project
-import os
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from .forms import TaskForm
-from django.core.mail import send_mail
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from .forms import TaskForm
-from .models import Task
-from django.core.mail import send_mail
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from .forms import TaskForm
-from .models import Task
-from django.core.mail import send_mail
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from .forms import TaskForm
-from .models import Project, Task
-from django.core.mail import send_mail
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from .forms import TaskForm
-from .models import Project, Task
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from .forms import TaskForm
-from .models import Project, Task
-from django.core.mail import send_mail
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from .models import Task
-import openai
-import logging
+
+from .models import User, Project, File, Directory, Invitation, Task
+from .forms import (
+    CustomUserCreationForm, LoginForm, TaskForm, VerificationForm, 
+    InvitationForm, ProjectForm, UserPermissionForm, 
+    EditFileForm, DocumentFileForm, CodeFileForm, DirectoryManagementForm
+)
+from .github_service import GitHubService
+
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.conf import settings
-from django.contrib import messages
-from .models import Project
-#project delete add"
-import requests
-import base64
+from .models import Project, Task
 
 
 
@@ -991,11 +953,6 @@ def mark_task_done(request, task_id):
 
         return redirect('task_list')
     return redirect('task_list')
-
-
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from .models import Project, Task
 
 @login_required
 def project_tasks(request, project_id):
