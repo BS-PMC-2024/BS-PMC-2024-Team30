@@ -40,6 +40,9 @@
                 <li class="nav-item {% if request.resolver_match.view_name == 'project_code' %}active{% endif %}">
                     <a class="nav-link {% if request.resolver_match.view_name == 'project_code' %}active{% endif %}" href="{% url 'project_code' pk=project.pk %}">Project Code</a>
                 </li>
+                <li class="nav-item {% if request.resolver_match.view_name == 'ai_code_improvement' %}active{% endif %}">
+                    <a class="nav-link {% if request.resolver_match.view_name == 'ai_code_improvement' %}active{% endif %}" href="{% url 'ai_code_improvement' project_id=project.pk %}">AI Code Improvement</a>
+                </li>
             </ul>
         </div>
     </nav>
