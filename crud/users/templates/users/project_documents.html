@@ -6,7 +6,7 @@
     <h1>{{ project.name }} - Document files</h1>
     {% include 'navbar.html' %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <h2>Upload Document File</h2>
+    <h2>Upload a document</h2>
     <method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}
@@ -25,7 +25,7 @@
         </button>
     </form>
 
-    <h2>Existing Document Files</h2>
+    <h2>Existing documents</h2>
     <ul>
         {% for file in document_files %}
             <li>

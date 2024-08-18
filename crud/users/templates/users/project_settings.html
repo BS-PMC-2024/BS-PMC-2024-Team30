@@ -6,6 +6,27 @@
     <h1>{{ project.name }} - Settings</h1>
     {% include 'navbar.html' %}
 
+    <section class="invite-members">
+        <h2>Invite Team Members</h2>
+        <form method="POST" action="{% url 'invite_member' project.id %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="email">Suggested Team Members:</label>
+                <select name="suggested_email" id="suggested_email" class="form-control">
+                    <option value="">-- Select a team member --</option>
+                    {% for user in shared_project_users %}
+                        <option value="{{ user.email }}">{{ user.email }} ({{ user.username }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="manual_email">Or Enter an Email:</label>
+                <input type="email" name="manual_email" id="manual_email" class="form-control" placeholder="Enter email address">
+            </div>
+            <button type="submit" class="btn btn-primary">Send Invitation</button>
+        </form>
+    </section>
+
     <section class="delete-project">
         <h2>Delete Project</h2>
         <p>Warning: This action cannot be undone.</p>

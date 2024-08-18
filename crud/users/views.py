@@ -521,6 +521,7 @@ def delete_directory_from_database(directory):
     
     delete_subdirectories(directory)
 
+@login_required
 def project_documents(request, pk):
     project = get_object_or_404(Project, pk=pk)
     
@@ -559,7 +560,6 @@ def project_documents(request, pk):
                 print("exists")
                 existing_file.delete()
 
-            # Save the new file
             file.save()
 
             try:
@@ -879,7 +879,42 @@ def project_settings(request, pk):
     project = get_object_or_404(Project, pk=pk)
     if project.manager != request.user:
         raise PermissionDenied
-    return render(request, 'users/project_settings.html', {'project': project})
+
+    # get users who have worked with this manager on other projects
+    shared_project_users = User.objects.filter(
+        projects__manager=request.user
+    ).distinct()
+    return render(request, 'users/project_settings.html', {
+        'project': project,
+        'shared_project_users': shared_project_users
+    })
+@login_required
+def invite_member(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+    if project.manager != request.user:
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        email = request.POST.get('manual_email') or request.POST.get('suggested_email')
+        if not email:
+            messages.error(request, 'Please select a team member or enter an email address.')
+            return redirect('project_settings', pk=project_id)
+        user = User.objects.filter(email=email).first()
+        if user:
+            if project.team_members.filter(id=user.id).exists():
+                messages.warning(request, f'{user.username} is already a member of the project.')
+            else:
+                send_invitation_email(request, email, project.id)
+                messages.success(request, f'{user.username} has been invited to the project.')
+        else:
+            # Handle the case where the email is not associated with an existing user
+            messages.info(request, f'An invitation email has been sent to {email}.')
+        #user = User.objects.get(email=email)
+        #email = email.strip()
+        
+        #messages.success(request, f'{user.get_full_name()} has been invited to the project.')
+
+    return redirect('project_settings', pk=project_id)
 
 from .forms import TaskForm
 
