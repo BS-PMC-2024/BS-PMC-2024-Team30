@@ -1,13 +1,15 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
+
 SECRET_KEY = 'your-secret-key'
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = []
@@ -130,6 +132,16 @@ EMAIL_HOST = 'smtp.sendgrid.net'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'apikey'  # This is literal, do not change it to your SendGrid username
+EMAIL_HOST_PASSWORD = os.getenv('SENDGRID_API_KEY')
+
+# GitHub Integration
+GITHUB_API_KEY = os.getenv('GITHUB_API_KEY')
+GITHUB_SECRET = os.getenv('GITHUB_SECRET')
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+GITHUB_REPO = os.getenv('GITHUB_REPO')
+
+# Chatgpt Integration
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 # Redirect URLs
 LOGIN_URL = 'login'
