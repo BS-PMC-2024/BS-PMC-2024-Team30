@@ -950,3 +950,18 @@ def mark_task_done(request, task_id):
 
         return redirect('task_list')
     return redirect('task_list')
+
+
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from .models import Project, Task
+
+@login_required
+def project_tasks(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+    tasks = Task.objects.filter(project=project, created_by=request.user)
+
+    return render(request, 'users/project_tasks.html', {
+        'project': project,
+        'tasks': tasks,
+    })

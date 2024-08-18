@@ -29,7 +29,10 @@
                 </li>
                 <li class="nav-item {% if request.resolver_match.view_name == 'create_task' and project %}active{% endif %}">
                     <a class="nav-link {% if request.resolver_match.view_name == 'create_task' %}active{% endif %}" href="{% url 'create_task' project_id=project.pk %}">Create Task</a>
-                </li>                
+                </li>   
+                <li class="nav-item {% if request.resolver_match.view_name == 'project_tasks' %}active{% endif %}">
+                    <a class="nav-link {% if request.resolver_match.view_name == 'project_tasks' %}active{% endif %}" href="{% url 'project_tasks' project_id=project.pk %}">My Tasks</a>
+                </li>             
                 {% endif %}
                 <li class="nav-item {% if request.resolver_match.view_name == 'project_documents' %}active{% endif %}">
                     <a class="nav-link {% if request.resolver_match.view_name == 'project_documents' %}active{% endif %}" href="{% url 'project_documents' pk=project.pk %}">Project Documents</a>
