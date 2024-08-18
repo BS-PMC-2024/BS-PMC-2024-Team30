@@ -2,6 +2,13 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import User, Project, File, Directory, Invitation
 import os
+from .models import Task
+from django import forms
+from .models import Task
+
+from .models import Task, Project, User
+
+
 
 class CustomUserCreationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
@@ -153,3 +160,22 @@ class InvitationForm(forms.ModelForm):
 class EditFileForm(forms.Form):
     content = forms.CharField(widget=forms.Textarea, label="File Content")
  
+
+class TaskForm(forms.ModelForm):
+    assigned_to = forms.ModelMultipleChoiceField(
+        queryset=User.objects.none(),  # נעדכן את זה ב-View
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label="Assign to Developers"
+    )
+
+    class Meta:
+        model = Task
+        fields = ['title', 'description', 'assigned_to']
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)  # מקבלים את המשתמש מה-View
+        super(TaskForm, self).__init__(*args, **kwargs)
+        if user:
+            # מציג רק את המשתמשים שמשויכים לפרויקטים שהמנהל הנוכחי יצר
+            self.fields['assigned_to'].queryset = User.objects.filter(projects__manager=user).distinct()

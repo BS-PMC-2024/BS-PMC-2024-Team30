@@ -1,0 +1,6 @@
+<h2>Your Tasks</h2>
+<ul>
+    {% for task in tasks %}
+        <li>{{ task.title }} - {% if task.is_done %}Done{% else %}<a href="{% url 'mark_task_done' task.id %}">Mark as Done</a>{% endif %}</li>
+    {% endfor %}
+</ul>

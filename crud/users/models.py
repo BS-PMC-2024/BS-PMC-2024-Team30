@@ -65,3 +65,15 @@ class File(models.Model):
     file = models.FileField(upload_to='files/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     file_type = models.CharField(max_length=10, choices=[('code', 'Code'), ('document', 'Document')])
+
+class Task(models.Model):
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)  # קישור ל-Project
+    assigned_to = models.ManyToManyField(User, related_name='tasks')  # רשימת מפתחים
+    created_by = models.ForeignKey(User, related_name='created_tasks', on_delete=models.CASCADE)
+    is_done = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title

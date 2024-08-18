@@ -1,3 +1,4 @@
+from asyncio import Task
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -8,7 +9,7 @@ from django.template.loader import render_to_string
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 from django.http import HttpResponseForbidden, Http404, HttpResponseRedirect
-from .forms import CustomUserCreationForm, LoginForm, VerificationForm, InvitationForm
+from .forms import CustomUserCreationForm, LoginForm, TaskForm, VerificationForm, InvitationForm
 from .forms import ProjectForm, UserPermissionForm
 from django.http import HttpResponseForbidden, HttpResponse
 from .forms import CustomUserCreationForm, LoginForm, VerificationForm, EditFileForm
@@ -24,6 +25,41 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from .models import Project
 import os
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from .forms import TaskForm
+from django.core.mail import send_mail
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from .forms import TaskForm
+from .models import Task
+from django.core.mail import send_mail
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .forms import TaskForm
+from .models import Task
+from django.core.mail import send_mail
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .forms import TaskForm
+from .models import Project, Task
+from django.core.mail import send_mail
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .forms import TaskForm
+from .models import Project, Task
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .forms import TaskForm
+from .models import Project, Task
+from django.core.mail import send_mail
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from .models import Task
 
 #project delete add"
 import requests
@@ -844,3 +880,73 @@ def project_settings(request, pk):
     if project.manager != request.user:
         raise PermissionDenied
     return render(request, 'users/project_settings.html', {'project': project})
+
+from .forms import TaskForm
+
+
+
+@login_required
+def create_task(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+    
+    if request.method == 'POST':
+        form = TaskForm(request.POST, user=request.user)
+        if form.is_valid():
+            task = form.save(commit=False)
+            task.created_by = request.user
+            task.project = project  # שיוך המשימה לפרויקט הנוכחי
+            task.save()
+            form.save_m2m()
+
+            messages.success(request, 'Task created successfully and assigned to the selected developers.')
+
+            form = TaskForm(user=request.user)  # טופס חדש וריק לאחר יצירת המשימה
+    else:
+        form = TaskForm(user=request.user)
+
+    return render(request, 'users/create_task.html', {'form': form, 'project': project})
+
+@login_required
+def developer_tasks(request):
+    if request.method == 'POST':
+        task_id = request.POST.get('task_id')
+        task = Task.objects.get(id=task_id, assigned_to=request.user)
+        task.is_done = True
+        task.save()
+
+        # שליחת מייל למנהל הפרויקט
+        send_mail(
+            'Task Completed',
+            f'The task "{task.title}" has been marked as done by {request.user.username}.',
+            'shohamdimri@gmail.com',  # וודאי שהכתובת מאומתת ב-SendGrid
+            [task.created_by.email],
+            fail_silently=False,
+        )
+
+        # הצגת הודעה למשתמש
+        messages.success(request, 'Task marked as done successfully. An email has been sent to the project manager.')
+
+        return redirect('developer_tasks')  # הפניה חזרה לרשימת המשימות
+
+    # שליפת כל המשימות שהוקצו למשתמש המחובר
+    tasks = Task.objects.filter(assigned_to=request.user)
+    return render(request, 'users/developer_tasks.html', {'tasks': tasks})
+
+
+@login_required
+def mark_task_done(request, task_id):
+    task = Task.objects.get(pk=task_id)
+    if request.user in task.assigned_to.all():
+        task.is_done = True
+        task.save()
+
+        # Send email to the manager
+        send_mail(
+            'Task Completed',
+            f'The task "{task.title}" has been marked as done by {request.user.username}.',
+            'shohamdimri@gmail.com',
+            [task.created_by.email]
+        )
+
+        return redirect('task_list')
+    return redirect('task_list')

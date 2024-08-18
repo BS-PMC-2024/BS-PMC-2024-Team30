@@ -1,0 +1,41 @@
+{% extends 'layout.html' %}
+
+{% block title %}My Tasks{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>My Tasks</h1>
+
+    <!-- הצגת הודעות -->
+    {% if messages %}
+        <div class="alert alert-success" role="alert">
+            {% for message in messages %}
+                {{ message }}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if tasks %}
+        <ul class="list-group">
+            {% for task in tasks %}
+                <li class="list-group-item">
+                    <h5>{{ task.title }}</h5>
+                    <p>{{ task.description }}</p>
+                    <p><strong>Project:</strong> {{ task.project.name }}</p>
+                    {% if task.is_done %}
+                        <span class="badge badge-success">Completed</span>
+                    {% else %}
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="task_id" value="{{ task.id }}">
+                            <button type="submit" class="btn btn-success btn-sm">Mark as Done</button>
+                        </form>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>You have no tasks assigned.</p>
+    {% endif %}
+</div>
+{% endblock %}

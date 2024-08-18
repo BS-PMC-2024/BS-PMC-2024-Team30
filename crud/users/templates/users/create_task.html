@@ -1,0 +1,23 @@
+{% extends 'layout.html' %}
+
+{% block title %}Create Task for {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Create a New Task for {{ project.name }}</h1>
+    
+    {% if messages %}
+        <div class="alert alert-success" role="alert">
+            {% for message in messages %}
+                {{ message }}
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Create Task</button>
+    </form>
+</div>
+{% endblock %}
