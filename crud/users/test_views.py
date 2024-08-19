@@ -105,19 +105,6 @@ class ManagerHomeTestCase(TestCase):
         self.assertTemplateUsed(response, 'users/manager_home.html')
         self.assertIsInstance(response.context['form'], ProjectForm)
 
-    @patch('users.views.send_invitation_email')
-    def test_create_project_and_send_invitations(self, mock_send_invitation_email):
-        data = {
-            'name': 'New Project',
-            'description': 'Project Description',
-            'team_member_emails': 'member1@example.com, member2@example.com'
-        }
-        response = self.client.post(reverse('manager_home'), data)
-        self.assertRedirects(response, reverse('manager_home'))
-        self.assertTrue(Project.objects.filter(name='New Project').exists())
-        mock_send_invitation_email.assert_any_call(response.wsgi_request, 'member1@example.com', Project.objects.get(name='New Project').id)
-        mock_send_invitation_email.assert_any_call(response.wsgi_request, 'member2@example.com', Project.objects.get(name='New Project').id)
-
     def test_handle_invalid_form(self):
         data = {
             'name': '',  # Invalid name
@@ -1054,89 +1041,73 @@ class ProjectDetailTestCase(TestCase):
         self.assertContains(response, 'Created on:')
         self.assertContains(response, 'Managed by:')
 
-# from django.test import TestCase, Client
-# from django.urls import reverse
-# from django.contrib.auth import get_user_model
-# from django.core.files.uploadedfile import SimpleUploadedFile
-# from unittest.mock import patch
-# from users.models import Project, Directory, File
-# from users.forms import CodeFileForm
+class InviteMemberTests(TestCase):
+    def setUp(self):
+        # Create a manager and normal user
+        self.manager = User.objects.create_user(username='manager', email='manager@example.com', password='managerpassword')
+        self.user = User.objects.create_user(username='normaluser', email='user@example.com', password='userpassword')
 
-# User = get_user_model()
-
-# class ProjectCodeViewTests(TestCase):
-
-#     def setUp(self):
-#         self.client = Client()
-#         self.manager = User.objects.create_user(username='manager', email='manager@example.com', password='password')
-#         self.user = User.objects.create_user(username='user', email='user@example.com', password='password')
-#         self.project = Project.objects.create(name='Test Project', manager=self.manager)
-#         self.directory = Directory.objects.create(name='Test Directory', project=self.project)
-#         self.project.team_members.add(self.user)
-#         self.directory.edit_permissions.add(self.user)
-#         self.view_url = reverse('project_code', args=[self.project.id])
-#         self.client.login(username='user', password='password')
-
-#     def test_project_code_get(self):
-#         response = self.client.get(self.view_url)
-#         self.assertEqual(response.status_code, 200)
-#         self.assertTemplateUsed(response, 'users/project_code.html')
-#         self.assertIn('form', response.context)
-#         self.assertIn('code_files', response.context)
-#         self.assertIn('directories', response.context)
-
-#     @patch('users.views.upload_file_to_github')
-#     @patch('users.views.settings.GITHUB_TOKEN', 'fake_token')
-#     def test_project_code_post_success(self, mock_upload_file_to_github):
-#         uploaded_file = SimpleUploadedFile('test_code.py', b"print('Hello, World!')", content_type='text/x-python-script')
+        # Create a project with the manager as the project manager
+        self.project = Project.objects.create(name='Test Project', manager=self.manager)
         
-#         response = self.client.post(self.view_url, {
-#             'file': uploaded_file,
-#             'directory': self.directory.id,
-#         })
+        # Login as manager
+        self.client.login(username='manager', password='managerpassword')
 
-#         self.assertRedirects(response, self.view_url)
-        
-#         # Debugging output to check file paths in the database
-#         for f in File.objects.all():
-#             print(f"Database file path: {f.file.path}")
+    def test_permission_denied_for_non_manager(self):
+        # Log in as a normal user (not the project manager)
+        self.client.login(username='normaluser', password='userpassword')
 
-#         # Construct the expected base file name
-#         expected_base_name = 'test_code.py'
-#         self.assertTrue(File.objects.filter(file__contains=expected_base_name).exists())
-#         mock_upload_file_to_github.assert_called_once()
+        # Attempt to invite a member (should raise PermissionDenied)
+        response = self.client.post(reverse('invite_member', args=[self.project.id]), {
+            'manual_email': 'newuser@example.com'
+        })
 
-#     def test_project_code_post_invalid_form(self):
-#         response = self.client.post(self.view_url, {
-#             'file': '',
-#             'directory': '',
-#         })
+        # Verify that the response raises PermissionDenied
+        self.assertEqual(response.status_code, 403)  # 403 Forbidden
 
-#         self.assertEqual(response.status_code, 200)
-#         self.assertTemplateUsed(response, 'users/project_code.html')
-#         self.assertContains(response, 'form')
+    def test_invite_without_email(self):
+        # Attempt to invite a member without providing an email
+        response = self.client.post(reverse('invite_member', args=[self.project.id]), {
+            'manual_email': ''
+        })
 
-#     @patch('users.views.settings.GITHUB_TOKEN', None)
-#     def test_project_code_post_missing_github_token(self):
-#         uploaded_file = SimpleUploadedFile('test_code.py', b"print('Hello, World!')", content_type='text/x-python-script')
-        
-#         response = self.client.post(self.view_url, {
-#             'file': uploaded_file,
-#             'directory': self.directory.id,
-#         })
+        # Check that the error message is shown
+        messages = list(get_messages(response.wsgi_request))
+        self.assertEqual(str(messages[0]), 'Please select a team member or enter an email address.')
+        self.assertEqual(response.status_code, 302)  # Should redirect back to project settings
 
-#         self.assertEqual(response.status_code, 400)
-#         self.assertContains(response, 'Error: GitHub access token is not configured.', status_code=400)
+    def test_invite_existing_member(self):
+        # Add the user to the project team members
+        self.project.team_members.add(self.user)
 
-#     @patch('users.views.upload_file_to_github', side_effect=Exception('GitHub error'))
-#     @patch('users.views.settings.GITHUB_TOKEN', 'fake_token')
-#     def test_project_code_post_github_exception(self, mock_upload_file_to_github):
-#         uploaded_file = SimpleUploadedFile('test_code.py', b"print('Hello, World!')", content_type='text/x-python-script')
-        
-#         response = self.client.post(self.view_url, {
-#             'file': uploaded_file,
-#             'directory': self.directory.id,
-#         })
+        # Attempt to invite the same user again
+        response = self.client.post(reverse('invite_member', args=[self.project.id]), {
+            'manual_email': 'user@example.com'
+        })
 
-#         self.assertEqual(response.status_code, 500)
-#         self.assertContains(response, 'An error occurred: GitHub error', status_code=500)
+        # Check that the warning message is shown
+        messages = list(get_messages(response.wsgi_request))
+        self.assertEqual(str(messages[0]), f'{self.user.username} is already a member of the project.')
+        self.assertEqual(response.status_code, 302)  # Should redirect back to project settings
+
+    def test_invite_non_member_with_valid_email(self):
+        # Attempt to invite a valid user who is not already a team member
+        response = self.client.post(reverse('invite_member', args=[self.project.id]), {
+            'manual_email': 'user@example.com'
+        })
+
+        # Check that the success message is shown
+        messages = list(get_messages(response.wsgi_request))
+        self.assertEqual(str(messages[0]), f'{self.user.username} has been invited to the project.')
+        self.assertEqual(response.status_code, 302)  # Should redirect back to project settings
+
+    def test_invite_non_existent_user(self):
+        # Attempt to invite a non-existent user by email
+        response = self.client.post(reverse('invite_member', args=[self.project.id]), {
+            'manual_email': 'nonexistent@example.com'
+        })
+
+        # Check that the info message is shown
+        messages = list(get_messages(response.wsgi_request))
+        self.assertEqual(str(messages[0]), 'An invitation email has been sent to nonexistent@example.com.')
+        self.assertEqual(response.status_code, 302)  # Should redirect back to project settings
