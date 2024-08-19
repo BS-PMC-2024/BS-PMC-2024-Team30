@@ -11,6 +11,7 @@ class User(AbstractUser):
     verification_code = models.UUIDField(default=uuid.uuid4)
     is_verified = models.BooleanField(default=False)
     email = models.EmailField(unique=True)
+    blocked = models.BooleanField(default=False)
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='custom_user_set',
@@ -19,17 +20,11 @@ class User(AbstractUser):
                    'granted to each of their groups.'),
         related_query_name='custom_user',
     )
-    user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        related_name='custom_user_set',
-        blank=True,
-        help_text='Specific permissions for this user.',
-        related_query_name='custom_user',
-    )
+
 
 class Project(models.Model):
     name = models.CharField(max_length=100)
-    description = models.TextField(blank=True, null=True)  # Added description field
+    description = models.TextField(blank=True, null=True)
     manager = models.ForeignKey(User, related_name='managed_projects', on_delete=models.CASCADE)
     team_members = models.ManyToManyField(User, related_name='projects')
     created_at = models.DateTimeField(auto_now_add=True)
