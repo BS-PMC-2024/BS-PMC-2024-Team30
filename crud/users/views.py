@@ -32,7 +32,40 @@ from .github_service import GitHubService
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Project, Task
+###########
+import sendgrid
+from sendgrid.helpers.mail import Mail
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
+from .models import Project, File, User
+from .forms import CodeFileForm
+#############שינוי שלי 
+def upload_code(request, pk):
+    project = get_object_or_404(Project, pk=pk)
 
+    if request.method == 'POST':
+        form = CodeFileForm(request.POST, request.FILES)
+        if form.is_valid():
+            file = form.save(commit=False)
+            file.project = project
+            file.save()
+
+            # הצגת הודעה למפתחים שיש להם הרשאה לצפייה בפרויקט
+            users_with_view_permission = User.objects.filter(projects__in=[project], has_view_permission=True)
+            for user in users_with_view_permission:
+                messages.add_message(request, messages.SUCCESS, f'A new file was uploaded to project {project.name}.', extra_tags=f'user_{user.id}')
+
+            return redirect('project_detail', pk=project.id)
+    else:
+        form = CodeFileForm()
+
+    return render(request, 'users/upload_code.html', {
+        'form': form,
+        'project': project,
+    })
+
+#############################
 
 
 logger = logging.getLogger(__name__)
@@ -489,7 +522,6 @@ def delete_directory_from_database(directory):
     
     delete_subdirectories(directory)
 
-@login_required
 def project_documents(request, pk):
     project = get_object_or_404(Project, pk=pk)
     
@@ -605,6 +637,10 @@ def project_code(request, pk):
         )
         
     if request.method == 'POST':
+        users_with_view_permission = User.objects.filter(projects__in=[project], has_view_permission=True)
+
+        send_mail('Update', 'test', settings.EMAIL_USER, [users_with_view_permission])
+
         if 'delete_file' in request.POST:
             file_id = request.POST.get('file_id')
             if file_id.isdigit():

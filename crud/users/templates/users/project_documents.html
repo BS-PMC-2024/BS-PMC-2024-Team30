@@ -7,7 +7,7 @@
     {% include 'navbar.html' %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <h2>Upload a document</h2>
-    <method="post" enctype="multipart/form-data">
+    <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}
         <label for="document_type">Document Type:</label>
@@ -19,7 +19,6 @@
             <option value="Historical Profit Report (Annual)">Historical Profit Report (Annual)</option>
             <option value="Projected Profit Report (Annual)">Projected Profit Report (Annual)</option>
         </select>
-        </method=>
         <button type="submit" class="btn btn-primary">
             <i class="fas fa-upload"></i> Upload
         </button>
