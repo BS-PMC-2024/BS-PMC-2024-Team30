@@ -6,14 +6,6 @@
 <div class="container">
     <h1>My Tasks</h1>
 
-    <!-- הצגת הודעות -->
-    {% if messages %}
-        <div class="alert alert-success" role="alert">
-            {% for message in messages %}
-                {{ message }}
-            {% endfor %}
-        </div>
-    {% endif %}
 
     {% if tasks %}
         <ul class="list-group">

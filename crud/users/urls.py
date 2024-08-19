@@ -1,9 +1,8 @@
 from django.urls import path, include
-from .views import create_task, mark_task_done
-from .views import developer_tasks
-
-
 from . import views
+from django.contrib import admin  # ייבוא המודול admin של Django
+from users.admin import stats_report
+
 
 urlpatterns = [
     path('register/', views.register, name='register'),
@@ -28,10 +27,12 @@ urlpatterns = [
     path('download/<int:pk>/<int:file_id>/', views.download_file, name='download_file'),
     path('users/permission-error/<int:pk>/', views.permission_error, name='permission_error'),
     path('file/delete/<int:file_id>/', views.delete_file, name='delete_file'),
-    path('projects/<int:project_id>/create-task/', create_task, name='create_task'),  # יצירת משימה לפרויקט ספציפי
+    path('projects/<int:project_id>/create-task/', views.create_task, name='create_task'),  # יצירת משימה לפרויקט ספציפי
     path('tasks/<int:task_id>/done/', views.mark_task_done, name='mark_task_done'),
     path('my-tasks/', views.developer_tasks, name='developer_tasks'),
     path('projects/<int:project_id>/tasks/', views.project_tasks, name='project_tasks'),
     path('projects/<int:project_id>/ai-code-improvement/', views.ai_code_improvement, name='ai_code_improvement'),
     path('project/<int:project_id>/invite/', views.invite_member, name='invite_member'),
+     path('admin/stats-report/', stats_report, name='stats_report'),
+    path('admin/', admin.site.urls),  # זה הנתיב הנכון ל-Django Admin
 ]

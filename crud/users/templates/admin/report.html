@@ -1,0 +1,55 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>Admin Report</h1>
+
+<h2>Users</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>User Type</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Date Joined</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.get_persona_display }}</td>
+            <td>{{ user.username }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.date_joined }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>Projects</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Project Name</th>
+            <th>Created At</th>
+            <th>Project Manager</th>
+            <th>Team Members</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for project in projects %}
+        <tr>
+            <td>{{ project.name }}</td>
+            <td>{{ project.created_at }}</td>
+            <td>{{ project.manager.username }}</td>
+            <td>
+                {% for member in project.team_members.all %}
+                    {{ member.username }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
+
