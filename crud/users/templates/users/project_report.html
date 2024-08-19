@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>Project Report</h1>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Project Name</th>
+            <th>Created At</th>
+            <th>Project Manager</th>
+            <th>Team Members</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for project in projects %}
+        <tr>
+            <td>{{ project.name }}</td>
+            <td>{{ project.created_at }}</td>
+            <td>{{ project.manager.username }}</td>
+            <td>
+                {% for member in project.team_members.all %}
+                    {{ member.username }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1010,4 +1010,3 @@ def ai_code_improvement(request, project_id):
         'project': project,
         'suggestions': suggestions
     })
-
