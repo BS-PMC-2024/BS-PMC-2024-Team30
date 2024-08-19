@@ -4,9 +4,8 @@ import logging
 import requests
 import base64
 import openai
-
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth import login, authenticate, logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST, require_http_methods
 from django.core.mail import send_mail
@@ -29,9 +28,6 @@ from .forms import (
 )
 from .github_service import GitHubService
 
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from .models import Project, Task
 
 
 
@@ -114,7 +110,11 @@ def view_file(request, pk, file_id):
     directory_path = get_directory_path(file.directory)
     
     if request.method == 'POST':
+        if request.user not in file.directory.edit_permissions.all():
+            messages.warning(request, "You do not have permission to edit this file.")
+            return redirect('view_file', pk=pk, file_id=file_id)
         file_content = request.POST.get('file_content', '')
+
         try:
             # Update the file content on GitHub
             update_file_on_github(access_token, repo, f"{project.name}{project.id}/{directory_path}/{filename}", file_content)
@@ -956,6 +956,8 @@ def mark_task_done(request, task_id):
 @login_required
 def project_tasks(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
+    if request.user != project.manager:
+        raise PermissionDenied
     tasks = Task.objects.filter(project=project, created_by=request.user)
 
     return render(request, 'users/project_tasks.html', {
@@ -969,31 +971,45 @@ logger = logging.getLogger(__name__)
 @login_required
 def ai_code_improvement(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
-    suggestions = None
-
+    gpt_response = None
+    action = None
     if request.method == 'POST':
         code = request.POST.get('code')
+        action = request.POST.get('action')
         logger.debug(f"Code submitted: {code}")
         if code:
             try:
                 openai.api_key = settings.OPENAI_API_KEY
-
-                # שליחת הבקשה ל-ChatGPT
-                response = openai.ChatCompletion.create(
+                if action == 'improve':
+                    prompt = f"Please review and improve the following code:\n{code}"
+                elif action == 'optimize':
+                    prompt = f"Please optimize the following code for better performance:\n{code}"
+                elif action == 'find_bugs':
+                    prompt = f"Please find and fix potential bugs in the following code:\n{code}"
+                elif action == 'refactor':
+                    prompt = f"Please refactor the following code for better readability and maintainability:\n{code}"
+                elif action == 'add_comments':
+                    prompt = f"Please add comments to the following code:\n{code}"
+                elif action == 'describe':
+                    prompt = f"Please describe the following code:\n{code}"
+                # Call the OpenAI API using the correct method
+                response = openai.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
                         {"role": "system", "content": "You are a helpful assistant."},
-                        {"role": "user", "content": f"Please review and improve the following code:\n{code}"}
-                    ]
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=500,
+                    temperature=0.7,
                 )
 
                 # הדפסת התגובה ל-console
                 logger.debug(f"Response from OpenAI: {response}")
 
                 # בדיקת תוכן התגובה
-                if response and response['choices']:
-                    suggestions = response['choices'][0]['message']['content']
-                    logger.debug(f"Suggestions: {suggestions}")
+                if response and response.choices:
+                    gpt_response = response.choices[0].message.content
+                    logger.debug(f"Suggestions: {gpt_response}")
                 else:
                     messages.error(request, "No suggestions were returned by the AI.")
             except Exception as e:
@@ -1003,9 +1019,11 @@ def ai_code_improvement(request, project_id):
             messages.error(request, "Please enter some code.")
             logger.debug("No code was entered.")
     
-    logger.debug(f"Suggestions to be shown: {suggestions}")
+    logger.debug(f"Suggestions to be shown: {gpt_response}")
 
     return render(request, 'users/ai_code_improvement.html', {
         'project': project,
-        'suggestions': suggestions
+        'suggestions': gpt_response,
+        'action': action
     })
+    
