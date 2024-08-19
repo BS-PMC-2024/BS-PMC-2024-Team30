@@ -104,10 +104,10 @@ def download_file(request, pk, file_id):
         response = HttpResponse(f.read(), content_type='application/octet-stream')
         response['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}"'
         return response
-    
+@login_required
 def view_file(request, pk, file_id):
-    project = get_object_or_404(Project, pk=pk)
-    file = get_object_or_404(File, id=file_id)
+    project = get_object_or_404(Project, pk=pk, is_deleted=False)
+    file = get_object_or_404(File, id=file_id, is_deleted=False)
     access_token = settings.GITHUB_TOKEN
     repo = settings.GITHUB_REPO
     filename = file.file.name[6:]
@@ -118,28 +118,20 @@ def view_file(request, pk, file_id):
         try:
             # Update the file content on GitHub
             update_file_on_github(access_token, repo, f"{project.name}{project.id}/{directory_path}/{filename}", file_content)
-            # Debugging: Print values before redirect
-            print(f"Redirecting to view_file with pk={pk} and file_id={file_id}")
             return redirect('view_file', pk=pk, file_id=file_id)
         except requests.exceptions.HTTPError as http_err:
-            print(f"HTTP error occurred: {http_err}")
             return HttpResponse(f"HTTP error occurred: {http_err}", status=500)
         except Exception as e:
-            print(f"An unexpected error occurred: {e}")
             return HttpResponse(f"An unexpected error occurred: {e}", status=500)
     else:
         try:
             file_content = get_file_from_github(access_token, repo, f"{project.name}{project.id}/{directory_path}/{filename}")
-            # Debugging: Print values
-            print(f"Rendering view_file with pk={pk} and file_id={file_id}")
             return render(request, 'users/view_file.html', {'project': project, 'file_content': file_content, 'file_name': filename, 'file_id': file_id})
         except requests.exceptions.HTTPError as http_err:
-            print(f"HTTP error occurred: {http_err}")
             return HttpResponse(f"HTTP error occurred: {http_err}", status=500)
         except Exception as e:
-            print(f"An unexpected error occurred: {e}")
             return HttpResponse(f"An unexpected error occurred: {e}", status=500)
-        
+                
 def update_file_on_github(access_token, repo, path, content):
     url = f'https://api.github.com/repos/{repo}/contents/{path}'
     headers = {
@@ -194,7 +186,7 @@ def create_directory_on_github(access_token, dir_path):
 @login_required
 def manage_directories(request, project_id):
     
-    project = get_object_or_404(Project, pk=project_id)
+    project = get_object_or_404(Project, pk=project_id, is_deleted=False)
     if request.user != project.manager:
         return redirect('project_detail', pk=project_id)
     
@@ -238,7 +230,7 @@ def manage_directories(request, project_id):
     else:
         form = DirectoryManagementForm(project=project)
 
-    directories = Directory.objects.filter(project=project, parent__isnull=True)
+    directories = Directory.objects.filter(project=project, parent__isnull=True, is_deleted=False)
     return render(request, 'users/manage_directories.html', {
         'form': form,
         'directories': directories,
@@ -276,7 +268,7 @@ def permission_handler(directory, user, permission_type):
 
 @login_required
 def view_directory(request, directory_id):
-    directory = get_object_or_404(Directory, id=directory_id)
+    directory = get_object_or_404(Directory, id=directory_id, is_deleted=False)
     project = directory.project
     if request.user != project.manager:
         #return redirect('project_detail', pk=project.id)
@@ -488,13 +480,12 @@ def delete_directory_from_database(directory):
         directory.delete()
     
     delete_subdirectories(directory)
-
 @login_required
 def project_documents(request, pk):
-    project = get_object_or_404(Project, pk=pk)
+    project = get_object_or_404(Project, pk=pk, is_deleted=False)
     
-    # Get all document files for the project
-    document_files = File.objects.filter(project=project, file_type='document')
+    # Get all document files for the project that are not deleted
+    document_files = File.objects.filter(project=project, file_type='document', is_deleted=False)
 
     if request.method == 'POST':
         form = DocumentFileForm(request.POST, request.FILES)
@@ -506,7 +497,8 @@ def project_documents(request, pk):
             # Get or create the 'project_documents' directory
             document_directory, created = Directory.objects.get_or_create(
                 project=project,
-                name='project_documents'
+                name='project_documents',
+                is_deleted=False
             )
 
             # Extract file name and extension
@@ -515,17 +507,16 @@ def project_documents(request, pk):
             file.directory = document_directory
             file.file.name = document_type + extension
             file.file_type = "document"
-            print(file.file.name)
-            print(document_type[:8])
+
             existing_file = File.objects.filter(
                 project=project,
                 file_type='document',
                 directory=document_directory,
-                file__icontains=document_type[:8]
+                file__icontains=document_type[:8],
+                is_deleted=False
             ).first()
 
             if existing_file:
-                print("exists")
                 existing_file.delete()
 
             file.save()
@@ -537,8 +528,7 @@ def project_documents(request, pk):
 
                 # Define the path for the file on GitHub
                 directory_path = get_directory_path(file.directory)
-                filename = file.file.name
-                filename = filename[6:]  # Adjust based on your filename structure
+                filename = file.file.name[6:]  # Adjust based on your filename structure
                 file_content = file.file.read()
                 
                 # Upload the new file to GitHub
@@ -563,7 +553,6 @@ def project_documents(request, pk):
         'project': project,
         'document_files': document_files,
     })
-
         
 def delete_file(request, file_id):
     if request.method == 'POST':
@@ -582,33 +571,38 @@ def delete_file(request, file_id):
 
     return HttpResponse("Invalid request method.", status=405)
 
+@login_required
 def project_code(request, pk):
-    project = get_object_or_404(Project, pk=pk)
+    project = get_object_or_404(Project, pk=pk, is_deleted=False)
     
     if request.user != project.manager:
         directories_with_view_permissions = Directory.objects.filter(
             project=project,
-            view_permissions=request.user
+            view_permissions=request.user,
+            is_deleted=False
         )
         code_files = File.objects.filter(
             project=project,
             file_type='code',
-            directory__in=directories_with_view_permissions
+            directory__in=directories_with_view_permissions,
+            is_deleted=False
         )
     else:
         directories_with_view_permissions = Directory.objects.filter(
             project=project,
+            is_deleted=False
         )
         code_files = File.objects.filter(
             project=project,
             file_type='code',
+            is_deleted=False
         )
         
     if request.method == 'POST':
         if 'delete_file' in request.POST:
             file_id = request.POST.get('file_id')
             if file_id.isdigit():
-                file = get_object_or_404(File, id=int(file_id))
+                file = get_object_or_404(File, id=int(file_id), is_deleted=False)
                 if request.user == file.project.manager or request.user in file.directory.edit_permissions.all():
                     file.delete()
                     return redirect('project_code', pk=project.id)
@@ -631,8 +625,6 @@ def project_code(request, pk):
                 directory_path = get_directory_path(file.directory)
                 filename = file.file.name[6:]
 
-                # with open(file.file.path, 'rb') as f:
-                #     file_content = f.read()
                 file_content = file.file.read()
                 upload_file_to_github(
                     access_token,
@@ -663,7 +655,7 @@ def developer_home(request):
         return redirect('home')
     
     user = request.user
-    projects = Project.objects.filter(team_members=user)
+    projects = Project.objects.filter(team_members=user, is_deleted=False)
     return render(request, 'users/developer_home.html', {'projects': projects})
 
 @login_required
@@ -685,7 +677,7 @@ def manager_home(request):
     else:
         form = ProjectForm()
 
-    projects = Project.objects.filter(manager=request.user)
+    projects = Project.objects.filter(manager=request.user, is_deleted=False)
     
     # מציאת משתמשים שמקושרים לפרויקטים שהמנהל מנהל
     shared_project_users = User.objects.filter(
@@ -827,7 +819,7 @@ def logout_view(request):
     return redirect('login')
 
 def project_detail(request, pk):
-    project = get_object_or_404(Project, pk=pk)
+    project = get_object_or_404(Project, pk=pk, is_deleted=False)
     user = request.user
 
     if user != project.manager and not project.team_members.filter(id=user.id).exists():
@@ -955,7 +947,7 @@ def mark_task_done(request, task_id):
 
 @login_required
 def project_tasks(request, project_id):
-    project = get_object_or_404(Project, pk=project_id)
+    project = get_object_or_404(Project, pk=project_id, is_deleted=False)
     tasks = Task.objects.filter(project=project, created_by=request.user)
 
     return render(request, 'users/project_tasks.html', {
