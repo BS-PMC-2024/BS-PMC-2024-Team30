@@ -819,7 +819,7 @@ def login_view(request):
             password = form.cleaned_data['password']
             user = authenticate(request, username=username, password=password)
             
-            if user is not None and user.is_verified:
+            if user is not None and user.is_verified and not user.blocked:
                 # Generate a new verification code
                 user.verification_code = uuid.uuid4()
                 user.save()
@@ -831,6 +831,8 @@ def login_view(request):
 
                 request.session['user_id'] = user.id  # Store user ID in session
                 return redirect('verify_code')  # Redirect to code verification page
+            elif user is not None and user.blocked:
+                return render(request, 'users/login.html', {'form': form, 'error': 'Your account has been blocked by an admin'})
             else:
                 return render(request, 'users/login.html', {'form': form, 'error': 'Invalid username/password or account not verified'})
     else:
@@ -847,7 +849,7 @@ def verify_code(request):
             user_id = request.session.get('user_id')
             try:
                 user = User.objects.get(id=user_id, verification_code=code)
-                if user:
+                if user and not user.blocked:
                     login(request, user)  # Log the user in
                     return redirect('home')
             except User.DoesNotExist:
@@ -894,6 +896,7 @@ def project_settings(request, pk):
         'project': project,
         'shared_project_users': shared_project_users
     })
+    
 @login_required
 def invite_member(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
@@ -915,10 +918,6 @@ def invite_member(request, project_id):
         else:
             # Handle the case where the email is not associated with an existing user
             messages.info(request, f'An invitation email has been sent to {email}.')
-        #user = User.objects.get(email=email)
-        #email = email.strip()
-        
-        #messages.success(request, f'{user.get_full_name()} has been invited to the project.')
 
     return redirect('project_settings', pk=project_id)
 

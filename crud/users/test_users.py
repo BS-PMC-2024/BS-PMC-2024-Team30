@@ -113,21 +113,27 @@ class SimpleUserTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Invalid verification code')
 
-#@patch('users.views.CustomUserCreationForm')
-#@patch('users.views.get_current_site')
-#@patch('users.views.send_mail')
-# def test_register_view_post_valid(self, mock_send_mail, mock_get_current_site, mock_form_class):
-#         mock_form = mock_form_class.return_value
-#         mock_form.is_valid.return_value = True
-#         mock_user = Mock()
-#         mock_form.save.return_value = mock_user
-#         mock_get_current_site.return_value.domain = 'test.com'
+class UserBlockingTests(TestCase):
+    def setUp(self):
 
-#         request = self.factory.post(self.register_url, self.user_data)
-#         self._add_session_to_request(request)
+        self.user = User.objects.create_user(
+            username='normaluser',
+            email='user@example.com',
+            password='userpassword',
+            is_staff=False
+        )
 
-#         response = register(request)
-#         self.assertEqual(response.status_code, 302)
-#         self.assertEqual(response.url, self.email_verification_url)
-#         mock_send_mail.assert_called_once()
-#         mock_user.save.assert_called_once()
+    def test_blocked_user_cannot_login(self):
+        self.user.blocked = True
+        self.user.save()
+
+        # Attempt to log in as the blocked user
+        response = self.client.post(reverse('login'), {
+            'username': 'normaluser',
+            'password': 'userpassword'
+        })
+
+        self.assertContains(response, 'Your account has been blocked by an admin')
+
+        # Ensure the user is not redirected to the verification page
+        self.assertEqual(response.status_code, 200)
