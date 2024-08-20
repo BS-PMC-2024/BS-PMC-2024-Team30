@@ -37,7 +37,6 @@ selenium
 openai
 sendgrid
 
-
 ## Installation
 
 1. **Clone the Repository:**
@@ -101,24 +100,15 @@ pytest test_selenium.py
 
 ## Deployment
 
-
 Jenkins CI/CD Pipeline:
 The project includes a Jenkinsfile to automate the deployment process. Configure your Jenkins instance and integrate with your GitHub repository.
 
 Deploy to Heroku:
 This project can be deployed to Heroku by connecting your GitHub repository and configuring environment variables on the Heroku dashboard
 
-## Contributing
-
-We welcome contributions! Please follow these steps to contribute:
-Fork the repository.
-Create a new branch (git checkout -b feature-branch).
-Make your changes and commit them (git commit -m 'Add feature').
-Push to the branch (git push origin feature-branch).
-Create a Pull Request.
-
 ## License
 
+This project is licensed under the MIT License. See the LICENSE file for more details.
 
 ### Notes:
 - **Replace** the placeholder values like `yourusername`, `project-repo`, `your_secret_key`, and `your_sendgrid_api_key` with actual values.
