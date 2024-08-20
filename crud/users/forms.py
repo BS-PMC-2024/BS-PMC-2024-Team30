@@ -78,11 +78,13 @@ class CodeFileForm(forms.ModelForm):
         if project and user != project.manager:
              self.fields['directory'].queryset = Directory.objects.filter(
                 project=project,
-                edit_permissions=user
+                edit_permissions=user,
+                is_deleted = False
             )
         elif project and user == project.manager:
             self.fields['directory'].queryset = Directory.objects.filter(
                 project=project,
+                is_deleted = False
             )
 
     def clean_file(self):
@@ -151,7 +153,7 @@ class DirectoryManagementForm(forms.ModelForm):
         project = kwargs.pop('project', None)
         super().__init__(*args, **kwargs)
         if project:
-            self.fields['parent'].queryset = Directory.objects.filter(project=project)
+            self.fields['parent'].queryset = Directory.objects.filter(project=project, is_deleted = False)
             project_members = project.team_members.all()
             
             # Set the queryset for view and edit permissions fields

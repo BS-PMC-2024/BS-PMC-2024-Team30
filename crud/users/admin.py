@@ -106,14 +106,13 @@ class ProjectAdmin(admin.ModelAdmin):
         return super().get_queryset(request).filter(is_deleted=False)
 
 class DirectoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'project', 'is_deleted',  'parent', 'get_view_permissions', 'get_edit_permissions')
+    list_display = ('name', 'project', 'is_deleted', 'parent', 'get_view_permissions', 'get_edit_permissions')
     search_fields = ('name', 'project__name')
     list_filter = ('is_deleted',)
     filter_horizontal = ['view_permissions', 'edit_permissions']
     
     actions = ['delete_selected', 'restore_selected']
 
-    
     def get_view_permissions(self, obj):
         return ", ".join([user.username for user in obj.view_permissions.all()])
     get_view_permissions.short_description = 'View Permissions'
@@ -126,9 +125,34 @@ class DirectoryAdmin(admin.ModelAdmin):
     def delete_selected(self, request, queryset):
         queryset.update(is_deleted=True)
 
-    @admin.action(description='Restore selected directories')
+    @admin.action(description='Restore selected directories and their contents')
     def restore_selected(self, request, queryset):
-        queryset.update(is_deleted=False)
+        for directory in queryset:
+            self._restore_directory(directory)
+
+    def save_model(self, request, obj, form, change):
+        # If the directory is being restored (is_deleted is set to False)
+        if change and not obj.is_deleted:
+            # Restore the directory and its contents
+            self._restore_directory(obj)
+        else:
+            super().save_model(request, obj, form, change)
+
+    def _restore_directory(self, directory):
+        # Restore the directory itself
+        directory.is_deleted = False
+        directory.save()
+
+        # Restore all subdirectories
+        subdirectories = directory.subdirectories.filter(is_deleted=True)
+        for subdirectory in subdirectories:
+            self._restore_directory(subdirectory)
+
+        # Restore all files within this directory
+        files = directory.files.filter(is_deleted=True)
+        for file in files:
+            file.is_deleted = False
+            file.save()
 
     def get_queryset(self, request):
         if request.user.is_superuser:
@@ -137,15 +161,12 @@ class DirectoryAdmin(admin.ModelAdmin):
     
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name in ['view_permissions', 'edit_permissions']:
-            # Get the current object (Directory) being edited
             obj_id = request.resolver_match.kwargs.get('object_id')
             if obj_id:
-                # Get the current Directory instance
                 directory = Directory.objects.get(pk=obj_id)
-                # Filter users who are part of the current project
                 kwargs['queryset'] = directory.project.team_members.all()
         return super().formfield_for_manytomany(db_field, request, **kwargs)
-    
+
 
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
