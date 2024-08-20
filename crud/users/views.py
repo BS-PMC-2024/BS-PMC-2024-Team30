@@ -582,13 +582,11 @@ def file_del(request, file):
         file.deleted_at = timezone.now()
         file.save()
         for user in users_with_view_permission:
-            print(user.email)
             if request.user != user:
                 Notification.objects.create(
                     user=user,
                     message=f"A file - {file_name} has been deleted from directory {directory_name}"
                 )
-                print(user.email)
                 send_mail('A file was deleted in your project', f"A file - {file_name} has been deleted from directory {directory_name}", settings.EMAIL_USER, [user.email])
     return
 def delete_file(request, file_id):
@@ -949,7 +947,19 @@ def create_task(request, project_id):
             task.project = project  # שיוך המשימה לפרויקט הנוכחי
             task.save()
             form.save_m2m()
-
+            for user in task.assigned_to.all():
+                Notification.objects.create(
+                    user=user,
+                    message= f'The task "{task.title}" has been assigned to you by {request.user.username}\n Description: {task.description}.'
+                )
+            
+                send_mail(
+                    'New Task!',
+                    f'The task "{task.title}" has been assigned to you by {request.user.username}.\n Description: {task.description}',
+                    settings.EMAIL_USER,
+                    [user.email],
+                    fail_silently=False,
+                )
             messages.success(request, 'Task created successfully and assigned to the selected developers.')
 
             form = TaskForm(user=request.user)  # טופס חדש וריק לאחר יצירת המשימה
@@ -966,6 +976,10 @@ def developer_tasks(request):
         task.is_done = True
         task.save()
 
+        Notification.objects.create(
+            user=task.created_by,
+            message= f'The task "{task.title}" has been marked as done by {request.user.username}.'
+        )
         # שליחת מייל למנהל הפרויקט
         send_mail(
             'Task Completed',
@@ -985,23 +999,27 @@ def developer_tasks(request):
     return render(request, 'users/developer_tasks.html', {'tasks': tasks})
 
 
-@login_required
-def mark_task_done(request, task_id):
-    task = Task.objects.get(pk=task_id)
-    if request.user in task.assigned_to.all():
-        task.is_done = True
-        task.save()
+# @login_required
+# def mark_task_done(request, task_id):
+#     task = Task.objects.get(pk=task_id)
+#     if request.user in task.assigned_to.all():
+#         task.is_done = True
+#         task.save()
 
-        # Send email to the manager
-        send_mail(
-            'Task Completed',
-            f'The task "{task.title}" has been marked as done by {request.user.username}.',
-            settings.EMAIL_USER,
-            [task.created_by.email]
-        )
+#         Notification.objects.create(
+#             user=task.created_by,
+#             message= f'The task "{task.title}" has been marked as done by {request.user.username}.'
+#         )
+#         # Send email to the manager
+#         send_mail(
+#             'Task Completed',
+#             f'The task "{task.title}" has been marked as done by {request.user.username}.',
+#             settings.EMAIL_USER,
+#             [task.created_by.email]
+#         )
 
-        return redirect('task_list')
-    return redirect('task_list')
+#         return redirect('task_list')
+#     return redirect('task_list')
 
 @login_required
 def project_tasks(request, project_id):
