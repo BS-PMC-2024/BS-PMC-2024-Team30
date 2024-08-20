@@ -78,11 +78,13 @@ class CodeFileForm(forms.ModelForm):
         if project and user != project.manager:
              self.fields['directory'].queryset = Directory.objects.filter(
                 project=project,
-                edit_permissions=user
+                edit_permissions=user,
+                is_deleted = False
             )
         elif project and user == project.manager:
             self.fields['directory'].queryset = Directory.objects.filter(
                 project=project,
+                is_deleted = False
             )
 
     def clean_file(self):
@@ -114,20 +116,22 @@ class DocumentFileForm(forms.ModelForm):
     
 class UserPermissionForm(forms.Form):
     def __init__(self, *args, **kwargs):
+        project = kwargs.pop('project', None)
         user = kwargs.pop('user', None)
         permission_type = kwargs.pop('permission_type', None)
         super().__init__(*args, **kwargs)
         
-        if user and permission_type:
+        if user and permission_type and project:
+            project_members = project.team_members.all()
             if permission_type == 'view':
                 self.fields['view_permissions'] = forms.ModelMultipleChoiceField(
-                    queryset=User.objects.exclude(id=user.id),
+                    queryset=project_members.exclude(user_id=project.manager.id),
                     required=False,
                     widget=forms.CheckboxSelectMultiple
                 )
             elif permission_type == 'edit':
                 self.fields['edit_permissions'] = forms.ModelMultipleChoiceField(
-                    queryset=User.objects.exclude(id=user.id),
+                    queryset=project_members.exclude(user_id=project.manager.id),
                     required=False,
                     widget=forms.CheckboxSelectMultiple
                 )
@@ -149,11 +153,12 @@ class DirectoryManagementForm(forms.ModelForm):
         project = kwargs.pop('project', None)
         super().__init__(*args, **kwargs)
         if project:
-            self.fields['parent'].queryset = Directory.objects.filter(project=project)
-            if project.manager:
-                # Exclude the manager from the permissions fields
-                self.fields['view_permissions'].queryset = self.fields['view_permissions'].queryset.exclude(id=project.manager.id)
-                self.fields['edit_permissions'].queryset = self.fields['edit_permissions'].queryset.exclude(id=project.manager.id)
+            self.fields['parent'].queryset = Directory.objects.filter(project=project, is_deleted = False)
+            project_members = project.team_members.all()
+            
+            # Set the queryset for view and edit permissions fields
+            self.fields['view_permissions'].queryset = project_members.exclude(id=project.manager.id)
+            self.fields['edit_permissions'].queryset = project_members.exclude(id=project.manager.id)
     
     class Meta:
         model = Directory

@@ -1,7 +1,11 @@
 import base64
 import time
+from .admin import CustomUserAdmin
+import csv
 from django.contrib import messages
 import shutil
+from django.contrib.admin.sites import AdminSite
+from io import StringIO
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.messages import get_messages
@@ -11,8 +15,8 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
-from .models import Project
-from .forms import ProjectForm
+from .models import Project, Task
+from .forms import ProjectForm, TaskForm
 from unittest.mock import patch
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
@@ -1111,3 +1115,251 @@ class InviteMemberTests(TestCase):
         messages = list(get_messages(response.wsgi_request))
         self.assertEqual(str(messages[0]), 'An invitation email has been sent to nonexistent@example.com.')
         self.assertEqual(response.status_code, 302)  # Should redirect back to project settings
+        
+        
+class DirectoryAdminTests(TestCase):
+    def setUp(self):
+        # Create a superuser (admin)
+        self.admin_user = get_user_model().objects.create_superuser(
+            username='admin',
+            email='admin@example.com',
+            password='adminpassword'
+        )
+        
+        # Create regular users
+        self.user1 = get_user_model().objects.create_user(
+            username='user1',
+            email='user1@example.com',
+            password='userpassword1'
+        )
+        self.user2 = get_user_model().objects.create_user(
+            username='user2',
+            email='user2@example.com',
+            password='userpassword2'
+        )
+
+        # Create a project and a directory
+        self.project = Project.objects.create(name='Test Project', manager=self.admin_user)
+        self.project.team_members.set([self.user1, self.user2])  # Add users to the project
+
+        self.directory = Directory.objects.create(name='Test Directory', project=self.project)
+
+        # Login as admin
+        self.client.login(username='admin', password='adminpassword')
+
+    def test_admin_can_add_view_permissions(self):
+        # URL for the directory change page in the admin interface
+        url = reverse('admin:users_directory_change', args=[self.directory.id])  # Adjust 'yourapp' to your app name
+
+        # Simulate a POST request to update view permissions
+        response = self.client.post(url, {
+            'name': self.directory.name,
+            'project': self.directory.project.id,
+            'view_permissions': [self.user1.id],  # Add user1 to view permissions
+            'edit_permissions': []  # Keep edit permissions empty
+        })
+
+        # Refresh the directory instance from the database
+        self.directory.refresh_from_db()
+
+        # Check that user1 has been added to the view_permissions field
+        self.assertIn(self.user1, self.directory.view_permissions.all())
+        self.assertNotIn(self.user2, self.directory.view_permissions.all())  # Ensure user2 is not in the list
+
+    def test_admin_can_add_edit_permissions(self):
+        # URL for the directory change page in the admin interface
+        url = reverse('admin:users_directory_change', args=[self.directory.id])  # Adjust 'yourapp' to your app name
+
+        # Simulate a POST request to update edit permissions
+        response = self.client.post(url, {
+            'name': self.directory.name,
+            'project': self.directory.project.id,
+            'view_permissions': [],  # Keep view permissions empty
+            'edit_permissions': [self.user2.id]  # Add user2 to edit permissions
+        })
+
+        # Refresh the directory instance from the database
+        self.directory.refresh_from_db()
+
+        # Check that user2 has been added to the edit_permissions field
+        self.assertIn(self.user2, self.directory.edit_permissions.all())
+        self.assertNotIn(self.user1, self.directory.edit_permissions.all())  # Ensure user1 is not in the list
+
+    def test_admin_can_remove_permissions(self):
+        # Initially add permissions to both fields
+        self.directory.view_permissions.add(self.user1)
+        self.directory.edit_permissions.add(self.user2)
+
+        # URL for the directory change page in the admin interface
+        url = reverse('admin:users_directory_change', args=[self.directory.id])  # Adjust 'yourapp' to your app name
+
+        # Simulate a POST request to remove permissions
+        response = self.client.post(url, {
+            'name': self.directory.name,
+            'project': self.directory.project.id,
+            'view_permissions': [],  # Remove all view permissions
+            'edit_permissions': []  # Remove all edit permissions
+        })
+
+        # Refresh the directory instance from the database
+        self.directory.refresh_from_db()
+
+        # Check that both permissions have been removed
+        self.assertNotIn(self.user1, self.directory.view_permissions.all())
+        self.assertNotIn(self.user2, self.directory.edit_permissions.all())
+        
+
+class ExportUserProjectReportTests(TestCase):
+    def setUp(self):
+        # Create a superuser (admin)
+        self.admin_user = get_user_model().objects.create_superuser(
+            username='admin',
+            email='admin@example.com',
+            password='adminpassword'
+        )
+
+        # Create regular users
+        self.user1 = get_user_model().objects.create_user(
+            username='user1',
+            email='user1@example.com',
+            password='userpassword1',
+            persona='developer'
+        )
+        self.user2 = get_user_model().objects.create_user(
+            username='user2',
+            email='user2@example.com',
+            password='userpassword2',
+            persona='manager'
+        )
+
+        # Create a project and associate it with user2
+        self.project = Project.objects.create(name='Test Project', manager=self.user2)
+
+        # Initialize the CustomUserAdmin with the current admin site
+        self.admin = CustomUserAdmin(get_user_model(), AdminSite())
+
+        # Login as admin
+        self.client.login(username='admin', password='adminpassword')
+
+    def test_export_user_project_report(self):
+        # Simulate the export action
+        queryset = get_user_model().objects.filter(username__in=['user1', 'user2'])
+        response = self.admin.export_user_project_report(request=None, queryset=queryset)
+
+        # Check that the response is an HttpResponse with CSV content
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        self.assertEqual(response['Content-Disposition'], 'attachment; filename="admin_report.csv"')
+
+        # Parse the CSV content
+        csv_content = response.content.decode('utf-8')
+        csv_reader = csv.reader(StringIO(csv_content))
+
+        # Verify the header row
+        header = next(csv_reader)
+        self.assertEqual(header, ['User Type', 'Username', 'Email', 'Date Joined', 'Project Count', 'Project Names'])
+
+        # Verify the data rows
+        row1 = next(csv_reader)
+        self.assertEqual(row1, [self.user1.get_persona_display(), 'user1', 'user1@example.com', str(self.user1.date_joined), '0', ''])
+
+        row2 = next(csv_reader)
+        self.assertEqual(row2, [self.user2.get_persona_display(), 'user2', 'user2@example.com', str(self.user2.date_joined), '1', 'Test Project'])
+
+    def test_export_user_project_report_no_projects(self):
+        # Create a user with no associated projects
+        self.user3 = get_user_model().objects.create_user(
+            username='user3',
+            email='user3@example.com',
+            password='userpassword3',
+            persona='developer'
+        )
+
+        # Simulate the export action for this user
+        queryset = get_user_model().objects.filter(username='user3')
+        response = self.admin.export_user_project_report(request=None, queryset=queryset)
+
+        # Check that the response is an HttpResponse with CSV content
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        self.assertEqual(response['Content-Disposition'], 'attachment; filename="admin_report.csv"')
+
+        # Parse the CSV content
+        csv_content = response.content.decode('utf-8')
+        csv_reader = csv.reader(StringIO(csv_content))
+
+        # Verify the header row
+        header = next(csv_reader)
+        self.assertEqual(header, ['User Type', 'Username', 'Email', 'Date Joined', 'Project Count', 'Project Names'])
+
+        # Verify the data row for user3 (should have 0 projects)
+        row = next(csv_reader)
+        self.assertEqual(row, [self.user3.get_persona_display(), 'user3', 'user3@example.com', str(self.user3.date_joined), '0', ''])
+
+class CreateTaskViewTests(TestCase):
+    def setUp(self):
+        # Create a user and log them in
+        self.user = get_user_model().objects.create_user(username='testuser', password='testpassword')
+        self.client.login(username='testuser', password='testpassword')
+
+        # Create a project for the user
+        self.project = Project.objects.create(name='Test Project', manager=self.user)
+
+    def test_create_task_get(self):
+        # Simulate a GET request to the create_task view
+        response = self.client.get(reverse('create_task', args=[self.project.id]))
+
+        # Check that the response is successful and the correct template is used
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'users/create_task.html')
+        self.assertIsInstance(response.context['form'], TaskForm)
+
+class TaskViewTests(TestCase):
+    def setUp(self):
+        # Create a project manager and a developer
+        self.manager = get_user_model().objects.create_user(username='manager', email="manager@example.com", password='testpassword', persona='manager')
+        self.developer = get_user_model().objects.create_user(username='developer', email="dev@example.com", password='testpassword', persona='developer')
+
+        # Create a project managed by the manager
+        self.project = Project.objects.create(name='Test Project', manager=self.manager)
+
+        # Create a task assigned to the developer
+        self.task = Task.objects.create(
+            title="Developer Task",
+            description="This is a task for the developer.",
+            project=self.project,
+            created_by=self.manager
+        )
+        self.task.assigned_to.set([self.developer])
+
+    def test_manager_access_tasks(self):
+        # Log in as the project manager
+        self.client.login(username='manager', password='testpassword')
+
+        # Simulate a GET request to the project tasks view
+        response = self.client.get(reverse('project_tasks', args=[self.project.id]))
+
+        # Check that the manager can access the tasks
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Developer Task')
+
+    def test_developer_access_tasks(self):
+        # Log in as the developer
+        self.client.login(username='developer', password='testpassword')
+
+        # Simulate a GET request to the developer tasks view
+        response = self.client.get(reverse('developer_tasks'))
+
+        # Check that the developer can access their tasks
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Developer Task')
+
+    def test_task_permission_denied_for_non_manager(self):
+        # Log in as a developer who is not the project manager
+        self.client.login(username='developer', password='testpassword')
+
+        # Simulate a GET request to the project tasks view
+        response = self.client.get(reverse('project_tasks', args=[self.project.id]))
+
+        # Check that the developer is denied access (403 Forbidden)
+        self.assertEqual(response.status_code, 403)
