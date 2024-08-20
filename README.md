@@ -1,86 +1,124 @@
-# Project Management Software
+# Project Name
 
 ## Introduction
+This project provides a structured platform for developers seeking efficient project management and seamless collaboration in document and content handling. The platform centralizes essential project documents like initiation documents and requirements, ensuring accessibility and adherence to professional standards. The project also integrates AI for code bug detection, optimizing software development processes.
 
-Welcome to our Project Management Software project! This web-based application aims to streamline project planning, execution, and monitoring using modern software development practices. Our software is designed to assist teams in managing tasks, deadlines, resources, and communication effectively.
-
-## Features
-
-- **Task Management**: Create, assign, and track tasks across projects.
-- **Team Collaboration**: Foster collaboration through comments, file attachments, and real-time updates.
-- **Project Planning**: Set milestones, timelines, and dependencies.
-- **Resource Management**: Allocate resources efficiently.
-- **Reporting**: Generate reports on project progress and performance metrics.
-- **User Management**: Control access with role-based permissions.
-- **Integration**: Integrate with other tools and services.
-
-## Goals
-
-Our project management software aims to:
-- **Improve Efficiency**: Streamline project workflows and reduce administrative overhead.
-- **Enhance Collaboration**: Facilitate seamless communication and collaboration among team members.
-- **Ensure Accountability**: Track progress and hold team members accountable for their tasks.
-- **Provide Insights**: Offer actionable insights through data-driven reporting.
-
-## Getting Started
-
-To get started with our project management software:
-
-### Installation
-
-Clone the repository and install dependencies:
-
-```bash
-git clone <repository_url>
-cd project-management-software
-pip install -r requirements.txt
-
-
-
-# Project Management Software
-
-## Introduction
-
-Welcome to our Project Management Software project! This web-based application aims to streamline project planning, execution, and monitoring using modern software development practices. Our software is designed to assist teams in managing tasks, deadlines, resources, and communication effectively.
+## Table of Contents
+1. [Features](#features)
+2. [Requirements](#requirements)
+3. [Installation](#installation)
+4. [Usage](#usage)
+5. [Running Tests](#running-tests)
+6. [Deployment](#deployment)
+7. [Contributing](#contributing)
+8. [License](#license)
 
 ## Features
+- User authentication (registration, login, logout)
+- Project creation, management, and deletion
+- Permission management for projects
+- Task content management (adding, editing, deleting)
+- Admin functionalities (blocking/unblocking users, restoring deleted content)
+- Automated notifications
+- Integration with AI for code bug detection
 
-- **Task Management**: Create, assign, and track tasks across projects.
-- **Team Collaboration**: Foster collaboration through comments, file attachments, and real-time updates.
-- **Project Planning**: Set milestones, timelines, and dependencies.
-- **Resource Management**: Allocate resources efficiently.
-- **Reporting**: Generate reports on project progress and performance metrics.
-- **User Management**: Control access with role-based permissions.
-- **Integration**: Integrate with other tools and services.
+## Requirements
+Django==5.0.7
+pytz==2018.9
+sqlparse==0.4.3
+pytest==7.0.1
+pytest-django
+requests
+django-allauth
+pipdeptree
+python-dotenv
+selenium
+openai
+sendgrid
 
-## Goals
+## Installation
 
-Our project management software aims to:
-- **Improve Efficiency**: Streamline project workflows and reduce administrative overhead.
-- **Enhance Collaboration**: Facilitate seamless communication and collaboration among team members.
-- **Ensure Accountability**: Track progress and hold team members accountable for their tasks.
-- **Provide Insights**: Offer actionable insights through data-driven reporting.
+1. **Clone the Repository:**
+   ```bash
+   git clone https://github.com/BS-PMC-2024/BS-PMC-2024-Team30.git
+   cd project-repo
 
-## Getting Started
+## Create a Virtual Environment:
 
-To get started with our project management software:
+python -m venv venv
+source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 
-To run the project you need to add the following line in the settings file: EMAIL_HOST_PASSWORD = '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' # Your SendGrid API key
-In line 115 
+## Install Dependencies:
 
-And if for some reason you get an error "
-Run Retz, the following commands in the terminal:
-1.source venv/bin/activate
-2. pip install django
-3.cd /Users/omershay/Desktop/NosPr/BS-PMC-2024-Team30/
-python3 manage.py runserver
-(depends on the location on your computer)
-3. python3 manage.py runserver 
-(if you are on a Macbook)
-
-Clone the repository and install dependencies:
-
-```bash
-git clone <repository_url>
-cd project-management-software
 pip install -r requirements.txt
+
+## Set Up Environment Variables:
+Create a .env file in the root directory with the following environment variables:
+
+GITHUB_SECRET=your_github_secret
+GITHUB_TOKEN=your_github_token
+GITHUB_REPO=your_github_repo_name
+EMAIL_USER=your_sendgrid_email
+SENDGRID_API_KEY=your_sendgrid_api_key
+OPENAI_API_KEY=your_openai_api_key
+
+## Apply Migrations:
+
+python manage.py migrate
+
+## Create a Superuser:
+
+python manage.py createsuperuser
+
+## Run the Development Server:
+
+python manage.py runserver
+
+## Usage 
+
+Access the Admin Panel:
+Visit http://127.0.0.1:8000/admin and log in with your superuser credentials to manage users and projects.
+
+Create and Manage Projects:
+Project Managers and Admins can create, edit, delete, and manage projects via the main dashboard.
+
+Manage Permissions:
+Assign and manage permissions for team members to ensure secure and appropriate access to project resources.
+
+Use AI for Code Bug Detection:
+Utilize the integrated AI tools to detect and resolve code bugs within the project tasks.
+
+## Running Tests
+Unit Tests:
+Run the unit tests to ensure all functionality is working as expected:
+python manage.py test
+
+Selenium Integration Tests:
+Ensure that Selenium is installed and configured properly. Then run the integration tests:
+pytest test_selenium.py
+
+## Deployment
+
+
+Jenkins CI/CD Pipeline:
+The project includes a Jenkinsfile to automate the deployment process. Configure your Jenkins instance and integrate with your GitHub repository.
+
+Deploy to Heroku:
+This project can be deployed to Heroku by connecting your GitHub repository and configuring environment variables on the Heroku dashboard
+
+## Contributing
+
+We welcome contributions! Please follow these steps to contribute:
+Fork the repository.
+Create a new branch (git checkout -b feature-branch).
+Make your changes and commit them (git commit -m 'Add feature').
+Push to the branch (git push origin feature-branch).
+Create a Pull Request.
+
+## License
+
+
+### Notes:
+- **Replace** the placeholder values like `yourusername`, `project-repo`, `your_secret_key`, and `your_sendgrid_api_key` with actual values.
+- If your project uses a different database (other than SQLite), update the `DATABASE_URL` accordingly.
+- Ensure the requirements file (`requirements.txt`) is up to date with all necessary dependencies.
