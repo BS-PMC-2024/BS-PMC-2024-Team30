@@ -5,7 +5,7 @@ import csv
 from .models import User, Project, Directory, File
 from django.utils.timezone import now
 from django.template.response import TemplateResponse
-
+from django.utils.html import format_html
     
 # דוח סטטיסטי מותאם
 def stats_report(request):
@@ -168,9 +168,11 @@ class DirectoryAdmin(admin.ModelAdmin):
         return super().formfield_for_manytomany(db_field, request, **kwargs)
 
 
+
+
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
-    list_display = ('file', 'directory', 'uploaded_at', 'is_deleted')
+    list_display = ('file_name_display', 'directory', 'uploaded_at', 'is_deleted')
     search_fields = ('file', 'directory__name')
     list_filter = ('is_deleted',)
 
@@ -188,6 +190,12 @@ class FileAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return super().get_queryset(request).all()
         return super().get_queryset(request).filter(is_deleted=False)
+
+    def file_name_display(self, obj):
+        return format_html("<span>{}</span>", obj.file.name)
+
+    file_name_display.short_description = 'File'
+
     
 admin.site.register(Directory, DirectoryAdmin)
 admin.site.register(User, CustomUserAdmin)

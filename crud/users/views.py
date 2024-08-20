@@ -901,6 +901,8 @@ def project_settings(request, pk):
     # get users who have worked with this manager on other projects
     shared_project_users = User.objects.filter(
         projects__manager=request.user
+    ).exclude(
+        projects=project
     ).distinct()
     return render(request, 'users/project_settings.html', {
         'project': project,
