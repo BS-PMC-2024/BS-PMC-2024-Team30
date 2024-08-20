@@ -24,8 +24,8 @@ This project provides a structured platform for developers seeking efficient pro
 - SendGrid Integration: Send email notifications to users about important events like task assignments or file deletions.
 
 ## Requirements
-Django==5.0.7
-pytz==2018.9
+* Django==5.0.7
+* pytz==2018.9
 sqlparse==0.4.3
 pytest==7.0.1
 pytest-django
