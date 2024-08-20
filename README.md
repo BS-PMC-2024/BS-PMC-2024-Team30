@@ -1,4 +1,4 @@
-# Project Name
+# NOSS
 
 ## Introduction
 This project provides a structured platform for developers seeking efficient project management and seamless collaboration in document and content handling. The platform centralizes essential project documents like initiation documents and requirements, ensuring accessibility and adherence to professional standards. The project also integrates AI for code bug detection, optimizing software development processes.
