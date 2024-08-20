@@ -14,13 +14,14 @@ This project provides a structured platform for developers seeking efficient pro
 8. [License](#license)
 
 ## Features
-- User authentication (registration, login, logout)
-- Project creation, management, and deletion
-- Permission management for projects
-- Task content management (adding, editing, deleting)
-- Admin functionalities (blocking/unblocking users, restoring deleted content)
-- Automated notifications
-- Integration with AI for code bug detection
+- User Management: Custom user model with different personas (Manager, Developer), email verification, and blocking features.
+- Project Management: Managers can create and manage projects, assign team members, and set up directories and files.
+- Directory and File Management: Ability to create directories, upload files, and manage permissions for viewing and editing files.
+- Task Management: Assign tasks to team members and send notifications/emails upon task assignment or completion.
+- Notifications: Real-time notifications for users about task assignments, file uploads, and other project-related events.
+- AI Code Improvement: Integration with OpenAI for code improvement, optimization, and bug detection.
+- GitHub Integration: Upload, update, and delete files from GitHub repositories.
+- SendGrid Integration: Send email notifications to users about important events like task assignments or file deletions.
 
 ## Requirements
 Django==5.0.7
