@@ -26,16 +26,16 @@ This project provides a structured platform for developers seeking efficient pro
 ## Requirements
 * Django==5.0.7
 * pytz==2018.9
-sqlparse==0.4.3
-pytest==7.0.1
-pytest-django
-requests
-django-allauth
-pipdeptree
-python-dotenv
-selenium
-openai
-sendgrid
+* sqlparse==0.4.3
+* pytest==7.0.1
+* pytest-django
+* requests
+* django-allauth
+* pipdeptree
+* python-dotenv
+* selenium
+* openai
+* sendgrid
 
 ## Installation
 
