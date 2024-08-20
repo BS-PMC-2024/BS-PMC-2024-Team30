@@ -4,6 +4,7 @@ import logging
 import requests
 import base64
 import openai
+from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout, get_user_model
 from django.contrib.auth.decorators import login_required
@@ -20,7 +21,7 @@ from django.core.exceptions import PermissionDenied
 from django.conf import settings
 from django.contrib import messages
 
-from .models import User, Project, File, Directory, Invitation, Task
+from .models import User, Project, File, Directory, Invitation, Task, Notification
 from .forms import (
     CustomUserCreationForm, LoginForm, TaskForm, VerificationForm, 
     InvitationForm, ProjectForm, UserPermissionForm, 
@@ -311,29 +312,38 @@ def view_directory(request, directory_id):
                 access_token = settings.GITHUB_TOKEN
                 directory_path = get_directory_path(file.directory)
                 file_path = f"{directory.project.name}{directory.project.id}/{directory_path}/{file.file.name}"
-                try:
-                    delete_file_from_github(access_token, repo, file_path)
-                except Exception as e:
-                    return HttpResponse(f"An error occurred while deleting the file from GitHub: {e}", status=500)
-                file.delete()
+                # try:
+                #     delete_file_from_github(access_token, repo, file_path)
+                # except Exception as e:
+                #     return HttpResponse(f"An error occurred while deleting the file from GitHub: {e}", status=500)
+                file_del(request, file)
 
         if 'delete_directory' in request.POST:
-            print("2")
             if request.user == directory.project.manager or request.user in directory.edit_permissions.all():
                 access_token = settings.GITHUB_TOKEN
                 repo = settings.GITHUB_REPO
                 try:
                     # Delete subdirectories and files
                     for subdirectory in directory.subdirectories.all():
-                        delete_directory_from_github(access_token, repo, f"{directory.project.name}{directory.project.id}/{get_directory_path(subdirectory)}")
-                        subdirectory.delete()
+                        #delete_directory_from_github(access_token, repo, f"{directory.project.name}{directory.project.id}/{get_directory_path(subdirectory)}")
+                        #subdirectory.delete()
+                        subdirectory.is_delete = True
+                        subdirectory.deleted_at = timezone.datetime.now()
+                        subdirectory.save()
                     for file in directory.files.all():
-                        file_path = f"{directory.project.name}{directory.project.id}/{get_directory_path(directory)}/{file.file.name}"
-                        delete_file_from_github(access_token, repo, file_path)
-                        file.delete()
+                        #file_path = f"{directory.project.name}{directory.project.id}/{get_directory_path(directory)}/{file.file.name}"
+                        #delete_file_from_github(access_token, repo, file_path)
+                        #file.delete()
+                        print(file.file.name)
+                        file.is_deleted = True
+                        file.deleted_at = timezone.datetime.now()
+                        file.save()
                     # Finally delete the directory itself
-                    delete_directory_from_github(access_token, repo, f"{directory.project.name}{directory.project.id}/{get_directory_path(directory)}")
-                    directory.delete()
+                    #delete_directory_from_github(access_token, repo, f"{directory.project.name}{directory.project.id}/{get_directory_path(directory)}")
+                    #directory.delete()
+                    directory.is_deleted = True
+                    directory.deleted_at = timezone.datetime.now()
+                    directory.save()
                 except Exception as e:
                     return HttpResponse(f"An error occurred: {e}", status=500)
                 return redirect('manage_directories', project_id=directory.project.id)
@@ -554,20 +564,70 @@ def project_documents(request, pk):
         'document_files': document_files,
     })
         
+def file_del(request, file):
+    users_with_view_permission = file.directory.view_permissions.all()
+    directory = file.directory  # Ensure the file has a directory attribute
+    # Check if the user is the project manager or has edit permissions for the directory
+    if request.user == file.project.manager or request.user in directory.edit_permissions.all():
+        directory_name = file.directory.name
+        print(directory_name)
+        file_name = file.file.name
+            #repo = settings.GITHUB_REPO
+            #access_token = settings.GITHUB_TOKEN
+            #directory_path = get_directory_path(file.directory)
+            #file_path = f"{directory.project.name}{directory.project.id}/{directory_path}/{file.file.name}"
+            #delete_file_from_github(access_token, repo, file_path)
+        
+        file.is_deleted = True
+        file.deleted_at = timezone.now()
+        file.save()
+        for user in users_with_view_permission:
+            print(user.email)
+            if request.user != user:
+                Notification.objects.create(
+                    user=user,
+                    message=f"A file - {file_name} has been deleted from directory {directory_name}"
+                )
+                print(user.email)
+                send_mail('A file was deleted in your project', f"A file - {file_name} has been deleted from directory {directory_name}", settings.EMAIL_USER, [user.email])
+    return
 def delete_file(request, file_id):
     if request.method == 'POST':
-        file = get_object_or_404(File, id=file_id)
-        directory = file.directory  # Ensure the file has a directory attribute
         
-        # Check if the user is the project manager or has edit permissions for the directory
-        if request.user == file.project.manager or request.user in directory.edit_permissions.all():
-            file.delete()
-            # Optionally, you might want to also delete from GitHub
-            # e.g., delete_file_from_github(file)
+        file = get_object_or_404(File, id=file_id)
+        file_del(request,file)
+        return redirect('project_code', pk=file.project.pk)
+        # file = get_object_or_404(File, id=file_id)
+        # users_with_view_permission = file.directory.view_permissions.all()
+        # directory = file.directory  # Ensure the file has a directory attribute
+        # # Check if the user is the project manager or has edit permissions for the directory
+        # if request.user == file.project.manager or request.user in directory.edit_permissions.all():
+        #     directory_name = file.directory.name
+        #     print(directory_name)
+        #     file_name = file.file.name
+        #     try:
+        #         #repo = settings.GITHUB_REPO
+        #         #access_token = settings.GITHUB_TOKEN
+        #         #directory_path = get_directory_path(file.directory)
+        #         #file_path = f"{directory.project.name}{directory.project.id}/{directory_path}/{file.file.name}"
+        #         #delete_file_from_github(access_token, repo, file_path)
+                
+        #         file.is_deleted = True
+        #         file.deleted_at = timezone.now()
+        #         for user in users_with_view_permission:
+        #             print(user.email)
+        #             if request.user != user:
+        #                 Notification.objects.create(
+        #                     user=user,
+        #                     message=f"A file - {file_name} has been deleted from directory {directory_name}"
+        #                 )
+        #                 print(user.email)
+        #                 send_mail('A file was deleted in your project', f"A file - {file_name} has been deleted from directory {directory_name}", settings.EMAIL_USER, [user.email])
+        #     except Exception as e:
+        #         return HttpResponse(f"An error occurred while deleting the file from GitHub: {e}", status=500)
 
-            return redirect('project_code', pk=file.project.pk)
-        else:
-            return HttpResponse("You do not have permission to delete this file.", status=403)
+        
+        
 
     return HttpResponse("Invalid request method.", status=405)
 
@@ -599,16 +659,6 @@ def project_code(request, pk):
         )
         
     if request.method == 'POST':
-        if 'delete_file' in request.POST:
-            file_id = request.POST.get('file_id')
-            if file_id.isdigit():
-                file = get_object_or_404(File, id=int(file_id), is_deleted=False)
-                if request.user == file.project.manager or request.user in file.directory.edit_permissions.all():
-                    file.delete()
-                    return redirect('project_code', pk=project.id)
-                else:
-                    return HttpResponse("You do not have permission to delete this file.", status=403)
-
         form = CodeFileForm(request.POST, request.FILES, project=project, user=request.user)
         if form.is_valid():
             file = form.save(commit=False)
@@ -616,7 +666,7 @@ def project_code(request, pk):
             file.directory = form.cleaned_data['directory']
             file.file_type = 'code'
             file.save()
-            
+            users_with_view_permission = file.directory.view_permissions.all()
             try:
                 access_token = settings.GITHUB_TOKEN
                 if not access_token:
@@ -632,6 +682,14 @@ def project_code(request, pk):
                     file_content,
                     "File upload"
                 )
+                for user in users_with_view_permission:
+                    # Send notification only if the user is not the current one
+                    if request.user != user:
+                        Notification.objects.create(
+                                user=user,
+                                message=f"A file - {filename} has been uploaded to directory {file.directory.name}"
+                            )
+                        send_mail('A file was uploaded to your project', f"A file - {filename} has been uploaded to directory {file.directory.name}", settings.EMAIL_USER, [user.email])
 
             except ValueError as e:
                 return HttpResponse(f"Error: {e}", status=400)
@@ -1019,3 +1077,17 @@ def ai_code_improvement(request, project_id):
         'action': action
     })
     
+@login_required
+def mark_notification_as_read(request, notification_id):
+    print(f"Marking notification {notification_id} as read")
+    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+    notification.is_read = True
+    notification.save()
+    print(f"Notification {notification_id} marked as read")
+    return redirect(request.META.get('HTTP_REFERER', 'home'))
+
+@login_required
+def mark_all_notifications_as_read(request):
+    unread_notifications = Notification.objects.filter(user=request.user, is_read=False)
+    unread_notifications.update(is_read=True)
+    return redirect(request.META.get('HTTP_REFERER', 'home'))

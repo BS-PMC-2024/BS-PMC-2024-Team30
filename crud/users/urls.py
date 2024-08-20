@@ -34,5 +34,8 @@ urlpatterns = [
     path('projects/<int:project_id>/ai-code-improvement/', views.ai_code_improvement, name='ai_code_improvement'),
     path('project/<int:project_id>/invite/', views.invite_member, name='invite_member'),
     path('admin/stats-report/', stats_report, name='stats_report'),
+    path('mark_notification_as_read/<int:notification_id>/', views.mark_notification_as_read, name='mark_notification_as_read'),
+    path('mark_all_read/', views.mark_all_notifications_as_read, name='mark_all_notifications_as_read'),
+
     #path('admin/', admin.site.urls),
 ]

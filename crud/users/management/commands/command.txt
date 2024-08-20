@@ -1,0 +1,1 @@
+command to delete files that were marked "is_deleted" for longer than a week - python manage.py delete_old_files
