@@ -3,12 +3,35 @@ from django.contrib.auth.admin import UserAdmin
 from django.http import HttpResponse
 import csv
 from .models import User, Project, Directory, File
+from django.utils.timezone import now
+from django.template.response import TemplateResponse
+
+    
+# דוח סטטיסטי מותאם
+def stats_report(request):
+    current_month = now().month
+    current_year = now().year
+
+    new_users_count = User.objects.filter(date_joined__month=current_month, date_joined__year=current_year).count()
+    new_projects_count = Project.objects.filter(created_at__month=current_month, created_at__year=current_year).count()
+
+    context = {
+        'new_users_count': new_users_count,
+        'new_projects_count': new_projects_count,
+    }
+
+    return TemplateResponse(request, "admin/stats_report.html", context)
+
+
+# רישום המודלים בממשק Django Admin הרגיל
+from .models import User
+from .models import Project
+
 
 class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
-        (None, {'fields': ('persona',)}),
+        (None, {'fields': ('blocked','persona',)}),
     )
-
     actions = ['export_user_project_report']
 
     @admin.action(description='Export Report')
@@ -19,10 +42,10 @@ class CustomUserAdmin(UserAdmin):
         writer = csv.writer(response)
         writer.writerow(['User Type', 'Username', 'Email', 'Date Joined', 'Project Count', 'Project Names'])
 
-        users = User.objects.all()
+        #users = User.objects.all()
         projects = Project.objects.all()
 
-        for user in users:
+        for user in queryset:
             project_count = projects.filter(manager=user).count()
             project_names = ', '.join([project.name for project in projects.filter(manager=user)])
             writer.writerow([
@@ -82,14 +105,22 @@ class ProjectAdmin(admin.ModelAdmin):
             return super().get_queryset(request).all()
         return super().get_queryset(request).filter(is_deleted=False)
 
-
-@admin.register(Directory)
 class DirectoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'project', 'is_deleted')
+    list_display = ('name', 'project', 'is_deleted',  'parent', 'get_view_permissions', 'get_edit_permissions')
     search_fields = ('name', 'project__name')
     list_filter = ('is_deleted',)
-
+    filter_horizontal = ['view_permissions', 'edit_permissions']
+    
     actions = ['delete_selected', 'restore_selected']
+
+    
+    def get_view_permissions(self, obj):
+        return ", ".join([user.username for user in obj.view_permissions.all()])
+    get_view_permissions.short_description = 'View Permissions'
+
+    def get_edit_permissions(self, obj):
+        return ", ".join([user.username for user in obj.edit_permissions.all()])
+    get_edit_permissions.short_description = 'Edit Permissions'
 
     @admin.action(description='Soft delete selected directories')
     def delete_selected(self, request, queryset):
@@ -103,7 +134,18 @@ class DirectoryAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return super().get_queryset(request).all()
         return super().get_queryset(request).filter(is_deleted=False)
-
+    
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name in ['view_permissions', 'edit_permissions']:
+            # Get the current object (Directory) being edited
+            obj_id = request.resolver_match.kwargs.get('object_id')
+            if obj_id:
+                # Get the current Directory instance
+                directory = Directory.objects.get(pk=obj_id)
+                # Filter users who are part of the current project
+                kwargs['queryset'] = directory.project.team_members.all()
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
+    
 
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
@@ -125,5 +167,6 @@ class FileAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return super().get_queryset(request).all()
         return super().get_queryset(request).filter(is_deleted=False)
-
+    
+admin.site.register(Directory, DirectoryAdmin)
 admin.site.register(User, CustomUserAdmin)

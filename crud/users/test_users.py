@@ -123,17 +123,38 @@ class UserBlockingTests(TestCase):
             is_staff=False
         )
 
+    
     def test_blocked_user_cannot_login(self):
+        self.user.is_verified = True
         self.user.blocked = True
         self.user.save()
 
-        # Attempt to log in as the blocked user
         response = self.client.post(reverse('login'), {
             'username': 'normaluser',
             'password': 'userpassword'
         })
-
-        self.assertContains(response, 'Your account has been blocked by an admin')
-
-        # Ensure the user is not redirected to the verification page
+        
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Your account has been blocked by an admin')
+        
+    def test_block_lift_allows_login(self):
+        self.user.is_verified = True
+        self.user.blocked = True
+        self.user.save()
+
+        response = self.client.post(reverse('login'), {
+            'username': 'normaluser',
+            'password': 'userpassword'
+        })
+        self.assertContains(response, 'Your account has been blocked by an admin')
+        
+        self.user.is_verified = True
+        self.user.blocked = False
+        self.user.save()
+
+        response = self.client.post(reverse('login'), {
+            'username': 'normaluser',
+            'password': 'userpassword'
+        })
+            
+        self.assertRedirects(response, reverse('verify_code'))

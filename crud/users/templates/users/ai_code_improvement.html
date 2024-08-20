@@ -3,6 +3,31 @@
 {% block title %}AI Code Improvement for {{ project.name }}{% endblock %}
 
 {% block content %}
+{% include 'navbar.html' %}
+<style>
+    .btn-purple {
+    background-color: #6f42c1; /* Purple color */
+    color: white;
+    }
+
+    .btn-purple:hover {
+        background-color: #563d7c; /* Darker purple for hover */
+        color: white;
+    }
+    .btn-orange {
+    background-color: #fd7e14; /* Orange color */
+    color: white;
+    }
+
+    .btn-orange:hover {
+        background-color: #e46b11; /* Darker orange for hover */
+        color: white;
+    }
+    pre {
+        white-space: pre-wrap;  /* Preserve whitespace and wrap text */
+        overflow-wrap: break-word;  /* Break long words if necessary */
+    }
+</style>
 <div class="container">
     <h2>AI Code Improvement for {{ project.name }}</h2>
     
@@ -12,11 +37,31 @@
             <label for="code">Enter your code:</label>
             <textarea class="form-control" id="code" name="code" rows="10">{{ request.POST.code }}</textarea>
         </div>
-        <button type="submit" class="btn btn-primary">Get Suggestions</button>
+        
+        <button type="submit" name="action" value="improve" class="btn btn-primary">Improve Code</button>
+        <button type="submit" name="action" value="optimize" class="btn btn-orange">Optimize Code</button>
+        <button type="submit" name="action" value="find_bugs" class="btn btn-warning">Find Bugs</button>
+        <button type="submit" name="action" value="refactor" class="btn btn-info">Refactor Code</button>
+        <button type="submit" name="action" value="add_comments" class="btn btn-success">Add Comments</button>
+        <button type="submit" name="action" value="describe" class="btn btn-purple">Describe The Code</button>
     </form>
 
     {% if suggestions %}
-        <h3>Suggested Improvements:</h3>
+        <h3>
+            {% if action == 'improve' %}
+                Suggested Improvements:
+            {% elif action == 'optimize' %}
+                Optimization Suggestions:
+            {% elif action == 'find_bugs' %}
+                Bug Fix Suggestions:
+            {% elif action == 'refactor' %}
+                Refactoring Suggestions:
+            {% elif action == 'add_comments' %}
+                Suggested Comments:
+            {% else %}
+                Code Summary:
+            {% endif %}
+        </h3>
         <div class="alert alert-info mt-4">
             <pre>{{ suggestions }}</pre>
         </div>

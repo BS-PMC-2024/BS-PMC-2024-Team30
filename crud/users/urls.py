@@ -1,7 +1,7 @@
 from django.urls import path, include
 from . import views
 from django.contrib import admin  # ייבוא המודול admin של Django
-
+from .admin import stats_report
 
 
 urlpatterns = [
@@ -33,5 +33,6 @@ urlpatterns = [
     path('projects/<int:project_id>/tasks/', views.project_tasks, name='project_tasks'),
     path('projects/<int:project_id>/ai-code-improvement/', views.ai_code_improvement, name='ai_code_improvement'),
     path('project/<int:project_id>/invite/', views.invite_member, name='invite_member'),
-    path('admin/', admin.site.urls),  # זה הנתיב הנכון ל-Django Admin
+    path('admin/stats-report/', stats_report, name='stats_report'),
+    #path('admin/', admin.site.urls),
 ]
